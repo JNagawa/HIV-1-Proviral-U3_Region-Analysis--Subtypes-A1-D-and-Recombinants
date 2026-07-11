@@ -1,0 +1,67 @@
+# ============================================================================
+#  .gitignore for HIV U3 analysis QC pipeline
+#  Keeps: scripts (*.sh), environment (*.yml), README, small config/text files
+#  Ignores: raw/processed sequence data, QC outputs, logs, SRA caches
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+#  Sequence data
+# ----------------------------------------------------------------------------
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.sra
+*.bam
+*.bai
+*.sam
+*.cram
+*.fasta
+*.fa
+*.fa.gz
+*.fna
+*.vcf
+*.vcf.gz
+
+# ----------------------------------------------------------------------------
+#  Data directories created by the scripts
+# ----------------------------------------------------------------------------
+# Nanopore pipeline (qc_u3analyis.sh)
+raw_data/
+filtered_data/
+
+# Illumina pipeline (qc_illumina_u3analysis.sh)
+illumina_raw_data/
+illumina_trimmed_data/
+
+# SRA prefetch caches (in case the default ~/ncbi location is used)
+ncbi/
+sra/
+
+# ----------------------------------------------------------------------------
+#  QC tool outputs (regenerable — no need to track)
+# ----------------------------------------------------------------------------
+# FastQC
+*_fastqc.zip
+
+# ----------------------------------------------------------------------------
+#  Logs (see note below about keeping the empty logs/ directory)
+# ----------------------------------------------------------------------------
+logs/*
+!logs/.gitkeep
+slurm-*.out
+slurm-*.err
+*.log
+
+# ----------------------------------------------------------------------------
+#  Environment / editor / OS cruft
+# ----------------------------------------------------------------------------
+__pycache__/
+*.pyc
+.conda/
+.snakemake/
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/

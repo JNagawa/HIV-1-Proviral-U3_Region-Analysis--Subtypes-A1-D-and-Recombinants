@@ -1,0 +1,31 @@
+name: HIV_U3analysis
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  # General Quality Assessment & Aggregation
+  - fastqc
+  - multiqc
+  
+  # Illumina QC & Trimming
+  - fastp
+  - trimmomatic
+  - cutadapt
+
+  # Nanopore & PacBio QC
+  - nanoplot
+  - nanoqc
+  - nanostat
+  - nanofilt
+  - porechop_abi
+
+  # Contamination Removal
+  - kraken2
+
+  # Sequence download and manipulation
+  - sra-tools
+  - seqkit
+
+  # PacBio circular consensus sequence calling (proxy for SMRT Link CCS)
+  - pbccs
