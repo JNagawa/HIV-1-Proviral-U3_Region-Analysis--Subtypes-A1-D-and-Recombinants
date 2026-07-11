@@ -10,8 +10,8 @@ A reproducible bioinformatics pipeline for processing, assembling, and analyzing
 ```text
 /home/jnagawa/Internship/
 ├── HIV_U3analysis_env.yml        # Conda environment specification
-├── qc_illumina_u3analysis.sh     # Illumina preprocessing pipeline (Slurm/Bash)
-├── qc_oxnano_u3analysis.sh       # Nanopore preprocessing pipeline (Slurm/Bash)
+├── illumina_u3analysis.sh        # Illumina end-to-end pipeline (Slurm/Bash)
+├── oxnano_u3analysis.sh          # Nanopore end-to-end pipeline (Slurm/Bash)
 ├── variant_call.sh               # Variant calling pipeline (BWA, SAMtools, BCFtools, SnpEff)
 ├── shiver/                       # Local clone of the SHIVER assembly suite
 └── [Data Directories]            # Generated during pipeline execution (raw_data, qc_reports, etc.)
@@ -46,14 +46,14 @@ The primary preprocessing pipelines are optimized for High-Performance Computing
 
 **Running via Slurm:**
 ```bash
-sbatch qc_illumina_u3analysis.sh
-sbatch qc_oxnano_u3analysis.sh
+sbatch illumina_u3analysis.sh
+sbatch oxnano_u3analysis.sh
 ```
 
 **Running Locally:**
 ```bash
-bash qc_illumina_u3analysis.sh
-bash qc_oxnano_u3analysis.sh
+bash illumina_u3analysis.sh
+bash oxnano_u3analysis.sh
 ```
 
 > **Note - Smart Resuming:** If the pipeline is interrupted, you can safely run the script again. It automatically checks for files that were already processed and picks up exactly where it left off, saving time.
