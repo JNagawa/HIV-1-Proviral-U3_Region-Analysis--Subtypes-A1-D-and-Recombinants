@@ -42,12 +42,6 @@ for SRR in $(subset_accessions nanopore "${REPO_ROOT}/scripts/common/subset_samp
     TIMELOG="${RESULTS_DIR}/porechop_nanofilt_${SRR}.time"
     LOG="${RESULTS_DIR}/porechop_nanofilt_${SRR}.log"
     mkdir -p "${OUTDIR}"
- the Phred-score rationale (Q20 = 99% base-call accuracy).
-TRIM_LEADING=3
-TRIM_TRAILING=3
-TRIM_SLIDINGWINDOW="4:20"
-TRIM_MINLEN=50
-TRIM_AVGQUAL=20
     TRIMMED="${OUTDIR}/${SRR}_trimmed.fastq.gz"
     FILTERED="${OUTDIR}/${SRR}_filtered.fastq.gz"
 

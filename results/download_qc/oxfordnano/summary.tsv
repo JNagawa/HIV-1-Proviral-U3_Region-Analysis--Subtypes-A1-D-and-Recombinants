@@ -1,0 +1,3 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+download_qc_oxfordnano	porechop_abi+nanofilt	SRR16005717	189.90		0	1	521758/528000 reads retained (98.8%)	(see ease_of_use_notes.md)
+download_qc_oxfordnano	porechop_abi+nanofilt	SRR16005712	366.49		0	1	431186/432000 reads retained (99.8%)	(see ease_of_use_notes.md)

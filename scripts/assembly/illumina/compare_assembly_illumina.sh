@@ -20,6 +20,13 @@ SUMMARY_TSV="${RESULTS_DIR}/summary.tsv"
 mkdir -p "${RESULTS_DIR}"
 [ -f "${RESULTS_DIR}/ease_of_use_notes.md" ] || cp "${REPO_ROOT}/scripts/common/ease_of_use_template.md" "${RESULTS_DIR}/ease_of_use_notes.md"
 
+# bwa mem requires the reference pre-indexed (bwa index) -- unlike
+# minimap2/SPAdes, it errors out immediately without it. Index once here
+# rather than assuming the production pipeline's own Step 7 already did it.
+if [ ! -s "${REF_FASTA}.bwt" ]; then
+    bwa index "${REF_FASTA}" > "${RESULTS_DIR}/bwa_index.log" 2>&1
+fi
+
 THREADS="${THREADS:-4}"
 export THREADS
 

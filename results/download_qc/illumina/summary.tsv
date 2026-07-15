@@ -5,3 +5,5 @@ download_qc_illumina	fastp	SRR908434	1.63		0	1	327554 reads passed	(see ease_of_
 download_qc_illumina	trimmomatic	SRR908434	4.49		0	1	12.33% surviving	(see ease_of_use_notes.md)
 download_qc_illumina	fastp	SRR908441	2.90		0	1	690358 reads passed	(see ease_of_use_notes.md)
 download_qc_illumina	trimmomatic	SRR908441	7.76		0	1	28.43% surviving	(see ease_of_use_notes.md)
+download_qc_illumina	fastp	SRR908446	9.99		0	1	2628884 reads passed	(see ease_of_use_notes.md)
+download_qc_illumina	trimmomatic	SRR908446	43.25		0	1	63.18% surviving	(see ease_of_use_notes.md)

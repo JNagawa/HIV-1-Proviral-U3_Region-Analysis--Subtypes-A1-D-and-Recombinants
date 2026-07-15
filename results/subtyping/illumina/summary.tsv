@@ -1,0 +1,6 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+subtyping_illumina	jphmm	SRR908437	0.03		1	0	n/a	(see ease_of_use_notes.md)
+subtyping_illumina	jphmm	SRR908434	0.02		1	0	n/a	(see ease_of_use_notes.md)
+subtyping_illumina	jphmm	SRR908441	0.02		1	0	n/a	(see ease_of_use_notes.md)
+subtyping_illumina	jphmm	SRR908446	0.02		1	0	n/a	(see ease_of_use_notes.md)
+subtyping_illumina	iqtree2	all_subset	0.89		2	0	n/a	(see ease_of_use_notes.md)
