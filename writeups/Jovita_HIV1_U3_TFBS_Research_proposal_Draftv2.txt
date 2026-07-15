@@ -1,0 +1,358 @@
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 1 of 11 
+Association of U3 Transcription Factor Binding Site Abundance and Genetic Architecture with 
+HIV-1 Latent Viral Reservoir Reactivation in subtypes A1, D and Recombinants. 
+ 
+ABSTRACT 
+Background: Human immunodeficiency virus type 1 (HIV -1) persists during antiretroviral therapy 
+(ART) through establishment of transcriptionally silent but replication-competent proviruses which is the 
+major barrier to HIV -1 cure (Churchill et al., 2016; Siliciano & Si liciano, 2022). Strategies aimed at 
+reversing HIV latency seek to induce viral transcription and expression (Maina et al., 2021) however, 
+clinical and ex vivo studies have demonstrated that only a fraction of intact proviruses respond to 
+stimulation (Ho et al., 2013, Siliciano & Siliciano, 2021, Khanal et al., 2021). HIV reservoir reactivation 
+is driven by host transcription factors binding to cis-regulatory motifs concentrated within the U3 region 
+of the HIV-1 long terminal repeat (LTR), however, these binding sites remain poorly characterized across 
+HIV-1 subtypes A1, D, and recombinant forms prevalent in Uganda and East Africa  (Mbondji-Wonje et 
+al., 2018). 
+Objectives: This study aims to: (1) systematically locate, quantify, and compare TFBS abundance and 
+sequence architecture for key TFs (NF-κB, SP1, NFAT, AP-1, TBP, and TFIID) across subtypes A1, D, 
+and recombinants using intact near -full-length proviral sequences; (2)  quantify predicted binding score 
+variations attributable to single nucleotide polymorphisms (SNPs) and copy number differences; and (3) 
+correlate U3 TFBS profiles with empirical basal transcription and post -stimulation LVR reactivation 
+outcomes. 
+Methodology: A cross -sectional analytical study will be conducted using near-full-length proviral 
+sequences generated from Full-Length Intact Proviral Sequencing (FLIP -SEQ) and the HIV Single 
+Molecule Real-Time Capture Assay (HIV SMRTcap) and metadata of the Rakai HIV Reservoir Cohort 
+study. U3 region T ranscription Factor Binding Sites (TFBS) will be computationally mapped using 
+JASPAR position weight matrices (PWMs) and the FIMO tool. Motif profiles will be correlated with 
+matched HIV-1 transcription profiling data and Quantitative Viral Outgrowth Assay (QVOA) reactivation 
+metrics using gener alised linear and mixed -effects regression models, adjusting for duration on ART, 
+CD4⁺ T-cell count, and viral subtype. 
+ 
+ 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 2 of 11 
+Introduction 
+The HIV latent viral reservoir (LVR) refers to long -lived resting CD4⁺ T cells that harbour 
+transcriptionally silent but replication -competent integrated HIV -1 proviruses. These cells are 
+immunologically indistinguishable from uninfected cells, rendering t hem invisible to the host immune 
+system and insensitive to Combination Antiretroviral Therapy (cART), which exclusively targets active 
+viral replication (Khanal et al., 2021; Siliciano & Siliciano, 2022). Latency reversal is defined as the 
+pharmacological or immunological induction of viral transcription and protein production from these 
+inactive proviruses. The long terminal repeat (LTR) serves as the predominant regulatory element driving 
+viral transcription and is structured into three sub -regions: U3 (unique 3' segment, containing regulatory 
+elements), R (repeated region, including the trans -activation response element, TAR), and U5 (unique 5' 
+segment). The U3 sub -region is further subdivided into the modulatory region ( –454 to –104 nt), core 
+enhancer (–105 to –79 nt), and core promoter ( –78 to –1 nt), each harbouring binding sites for specific 
+host transcription factors (Pereira et al., 2000; Delannoy et al., 2019). 
+ 
+HIV-1 remains one of the foremost public health epidemics, with 39.9 million people living with the virus 
+globally in 2023 (UNAIDS, 2023). Sub -Saharan Africa accounts for approximately 53% of all people 
+living with HIV despite comprising roughly 10% of the global population (Horvath, 2024). Uganda bears 
+a signif icant share of this burden and is characterised by an HIV epidemic predominantly driven by 
+subtypes A1, D, and circulating or unique recombinant forms (CRFs/URFs) rather than the globally 
+common subtype C or the well -studied subtype B (Prodger et al., 2017; Kankaka et al., 2023). Despite 
+decades of cART, HIV-1 infection remains incurable because the LVR persists for the lifetime of the host; 
+modelling estimates indicate that even with effective ART -mediated suppression, clearance of the 
+reservoir would require more than 70 years (Siliciano & Siliciano, 2022; McMyn et al., 2023). 
+ 
+Viral transcription is the proximal determinant of latency and reactivation. Under resting conditions 
+(latency), the HIV-1 LTR is kept transcriptionally silent through limited nuclear availability of activating 
+transcription factors, repressive chromatin organisation, and epigenetic silencing (Delannoy et al., 2019; 
+Rodari et al., 2021). Upon host cell stimulation via T-cell receptor (TCR) signalling or cytokine exposure, 
+downstream kinase cascades drive nuclear translocation of key host TFs most notably NF-κB, NFAT, and 
+AP-1 which bind cooperatively to U3 cis -regulatory elements, recruit RNA polymerase II, and initiate 
+high-velocity viral transcription (Pereira et al., 2000; Burnett et al., 2010). The basal transcription 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 3 of 11 
+machinery components TBP and TFIID anchor the pre -initiation complex at the TATA box within the 
+core promoter, while three SP1 binding sites in the core promoter sustain basal activity and cooperate with 
+NF-κB in enhancer-driven activation (Verma et al., 2016; Pal et al., 2022). 
+ 
+The U3 region exhibits substantial inter -clade nucleotide divergence, reaching up to 25% across HIV -1 
+subtypes (Mbondji-Wonje et al., 2018). Such variation is not biologically neutral: the duplication of the 
+NF-κB binding site in subtype C viruses confers markedly enhanced transcriptional output and a more 
+stable latent state (Pal et al., 2022; Verma et al., 2016). Furthermore, published Massively Parallel 
+Reporter Assay (MPRA) data demonstrate that natural LTR sequence variants spanning even a few 
+nucleotides can produce large, reproducible differences in transcriptional velocity and promoter drive 
+(Burnett et al., 2010).  Foundational studies working with subtype B reference sequences, engineered 
+reporter constructs, and plasma -derived viral RNA have progressively characterised how specific U3 
+TFBS arrangements govern transcriptional output across HIV -1 subtypes. Pereira et al. (2000) compiled 
+a comprehensive catalogue of cellular TF interactions with the subtype B LTR, establishing NF-κB, SP1, 
+NFAT, and AP-1 binding sites as the core drivers of HIV-1 promoter activity and providing the reference 
+framework against which all subsequent subtype comparisons have been made. Building on this, Burnett 
+et al. (2010) demonstrated using MPRA that subtypes A and D harb our likely compromised Sp1 site II 
+and Sp1 site III respectively deviations predicted to reduce TF binding affinity and alter the transcriptional 
+output of these clades relative to subtype B. Verma et al. (2016) further showed that in subtype C, the 
+physical proximity and precise orientation between the subtype -specific NF -κB motif (C -κB) and the 
+adjacent Sp1III site are indispensable for full promoter activation, with disruption of this spatial 
+relationship severely abrogating gene expression even when all  other binding sites remain intact. 
+Extending these observations, Pal et al. (2022) demonstrated that NF -κB copy number directly and 
+proportionally governs transcriptional strength in subtype C, with higher NF -κB site counts accelerating 
+both transcriptional activation and latency establishment, establishing a direct dose-response relationship 
+between TFBS abundance and promoter drive. At the inter -clade level, Mbondji -Wonje et al. (2018) 
+catalogued U3 sequence variation across 16 HIV -1 clades and recombinant forms using plasma -derived 
+viral sequences, revealing that subtype D carries distinct C/EBP-like motifs and subtype A1 displays non-
+canonical AP-1/CREB and reduced USF -1 E-box conservation patterns that diverge substantially from 
+the subtype B reference  framework on which most mechanistic latency studies have been based. 
+Collectively, these studies establish that U3 TFBS architecture is both subtype -specific and functionally 
+consequential, yet their reliance on reference strains, engineered constructs, and plasma-derived sequences 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 4 of 11 
+leaves the TFBS landscape of intact proviruses within the latent reservoir of subtypes A1, D, and 
+recombinants largely uncharacterised. 
+ 
+The Rakai Health Sciences Program (RHSP) Latent Viral Reservoir (LVR) Cohort in Uganda has 
+generated a unique paired dataset of near -full-length proviral sequences alongside empirical viral 
+outgrowth data. Prodger et al. (2017) demonstrated that virally suppressed Ugandans carry a median LVR 
+size of 0.36 IUPM approximately three -fold lower than an equivalent American cohort hinting that viral 
+genetic and host factors unique to non-B subtypes meaningfully modulate reservoir biology. Despite this, 
+only a few studies have systematically quantified TFBS abundance and motif sequence architecture across 
+subtypes A1, D, and recombinants, nor correlated these U3  level molecular features with functional 
+QVOA-based reactivation. This study introduces this precise integration, potentially revealing viral 
+genetic predictors of reactivation responsiveness that are critically needed to optimise latency -reversing 
+agent (LRA) strategies for African and globally diverse populations. 
+ 
+Problem statement 
+Despite recognition that host transcription factor (TF) binding to U3 motifs is the proximal driver of HIV-
+1 reactivation (Churchill et al., 2016; Siliciano & Siliciano, 2022), these binding sites remain poorly 
+characterized across HIV-1 subtypes A1, D, and recombinant forms prevalent in Uganda and East Africa. 
+Latency reversal agents (LRAs) pursuing the "shock-and-kill" strategy have consistently underperformed 
+in clinical trials, reactivating fewer than 5% of latent proviruses even in combination regimens , largely 
+because the molecular determinants of proviral inducibility remain incompletely defined (Debrabander et 
+al., 2023; Spivak & Planelles, 2018). 
+Studies examining plasma -derived U3 sequences from subtypes A1, D, and recombinant forms have 
+identified subtype-specific deviations in Sp1, C/EBP, and AP -1/CREB binding site architecture, notably 
+compromised Sp1 site III and distinct NF -κB enhancer configurations in subtype D, and non -canonical 
+C/EBP and reduced USF -1 E -box conservation in subtype A1  suggesting that these sequence -level 
+differences carry functional consequences for transcriptional regulation (Burnett et al., 2010; Mbondji -
+Wonje et al., 2018). However, these studies relied on plasma-derived viral RNA and consensus reference 
+sequences, which represent circulating replicating virus rather than primary proviral sequences integrated 
+within resting CD4⁺ T cells , the actual cellular compartment constituting the latent reservoir. Critically, 
+while TFBS patterns have been catalogued in reference and plasma -derived sequences, a systematic 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 5 of 11 
+position weight matrix (PWM) -based quantification of TFBS abundance in intact proviruses from 
+subtypes A1, D, and recombinants, linked to empirical QVOA reactivation outcomes from virally 
+suppressed individuals, is minimally studied . Additionally, it remains unresolved whether TFBS 
+abundance exerts a cumulative, dose -dependent effect on inducible transcription or whether a minimum 
+threshold configuration suffices for reactivation. To close this gap, this study will systematically quantify 
+and characterise U 3 TFBS abundance and sequence architecture in intact proviruses derived from the 
+latent reservoir of virally suppressed participants in the Rakai HIV Reservoir Cohort, and directly correlate 
+these profiles with matched transcription and QVOA reactivation data. 
+ 
+Significance 
+This study will generate a comprehensive, patient-derived TFBS abundance map for HIV-1 subtypes A1, 
+D, and recombinants, filling a critical void in non-B HIV cure research. By linking U3 TFBS architecture 
+to empirical QVOA-derived reactivation metrics from a well-characterised Ugandan cohort, findings will 
+provide actionable mechanistic insights to predict and stratify LVR reactivation potential. Results will 
+directly inform the rational design and optimisation of subtype -inclusive shock-and-kill and block -and-
+lock therapeutic strategies. All bioinformatic pipelines developed will be deposited as open -source tools 
+on GitHub, benefiting the global retrovirology community. 
+ 
+Research Questions 
+1. What are the quantitative differences in the frequency, spatial positioning, and sequence 
+composition of key U3 TFBS (NF-κB, SP1, NFAT, AP-1, TBP, TFIID) among and within HIV-1 
+subtypes A1, D, and their recombinants? 
+2. To what extent do sequence variants and copy number differences at U3 TFBS alter predicted 
+transcription factor binding scores across and within HIV-1 subtypes A1, D, and their 
+recombinants? 
+3. How do U3 TFBS abundance profiles and sequence configurations correlate with baseline viral 
+transcription levels and post-stimulation QVOA reactivation kinetics? 
+Objectives 
+General Objective 
+To evaluate the association between the genetic architecture and abundance of U3 region transcription 
+factor binding sites and the functional reactivation capacity of the latent HIV -1 reservoir across HIV -1 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 6 of 11 
+subtypes A1, D, and recombinants using paired proviral genomic and QVOA reactivation data from the 
+Rakai HIV Reservoir Cohort. 
+Specific Objectives  
+1. To extract and annotate U3 sequences intact near-full-length HIV-1 proviral genomes (FLIP-SEQ 
+and HIV SMRTcap) in the Rakai Cohort, stratified by subtype (A1, D, CRF/URF), and to 
+systematically map and quantify binding sites for NF -κB, SP1, NFAT, AP -1, TBP, and TFIID 
+using JASPAR PWMs and the FIMO tool, producing a comprehensive, per -provirus TFBS 
+abundance matrix. 
+2. To quantify and compare predicted TF binding affinity score variations attributable to SNPs, 
+insertion-deletions, and copy number differences across TFBS for each U3 motif, producing a 
+within- and between-subtype TFBS sequence variant catalogue. 
+3. To correlate per -provirus U3 TFBS abundance profiles and sequence architecture scores with 
+matched baseline viral transcription and post-stimulation QVOA p24 outgrowth kinetics from the 
+Rakai HIV Reservoir Cohort, using adjusted generalized linear regression models, and to 
+determine whether TFBS abundance exerts a cumulative or threshold effect on reactivation 
+outcomes. 
+Methodology 
+Study Design and data acquisition 
+This is a cross -sectional analytical study utili zing existing prospectively collected clinical, virological, 
+and genomic data from the Rakai HIV Reservoir Cohort.  
+Study Site and Setting 
+The study will be conducted at African Center of Excellence in Bioinformatics and Intensive data 
+sciences- Makerere University in collaboration with the Rakai Health Sciences Program (RHSP), Kalisizo, 
+Rakai District, Uganda and University of Western Ontario, Canada.  
+Study Population 
+The source population is the RHSP Latent Viral Reservoir (LVR) Cohort, comprising 90 HIV-1-infected 
+adults (≥18 years) who have maintained viral suppression on ART for at least one year (two plasma HIV-
+1 RNA measurements of <40 copies/mL, 10 –18 months apar t, with no intervening detectable result), 
+predominantly infected with HIV -1 subtypes A1, D, and recombinants (Prodger et al., 2020; Mumby et 
+al., 2025). The target study population is a subset of cohort participants for whom paired near-full-length 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 7 of 11 
+proviral sequences (FLIP -SEQ or HIV SMRTcap), HIV -1 transcription profiling data, and QVOA 
+reactivation data are available. 
+Sample Size 
+The analytic sample will include all cohort participants ( ~40 individuals) for whom at least one intact 
+proviral sequence, a matched HIV transcription profile, and a QVOA measurement are simultaneously 
+available. This is estimated at 40–70 participants, providing sufficient statistical power (80%, α = 0.05) to 
+detect a moderate correlation (r ≥ 0.35) between TFBS abundance and QVOA -derived reactivation 
+outcomes using two-tailed Pearson/Spearman tests and adjusted regression. 
+Sampling Technique 
+A purposive (criterion-based) sampling strategy will be applied, selecting all eligible individuals from the 
+RHSP LVR Cohort who simultaneously satisfy the inclusion criteria outlined below. No probability 
+sampling will be applied, as this study uses a fully pre-existing dataset. 
+ 
+Inclusion and Exclusion Criteria 
+Inclusion criteria: (1) RHSP LVR Cohort participant aged ≥18 years; (2) HIV -1 positive and on 
+suppressive ART with documented viral suppression (<40 copies/mL) for ≥1 year; (3) availability of ≥1 
+intact or near -full-length HIV -1 proviral sequence (FLIP -SEQ or HIV SMRTcap) (4)  availability of 
+matched basal HIV-1 transcription profiling data and/or QVOA outgrowth data; and (5) confirmed HIV -
+1 subtype classification as A1, D, or CRF/URF. 
+Exclusion criteria: (1) Participants with incomplete or failed U3 sequence assembly; (2) sequences 
+classified as subtype B or C; (3) participants with documented ART treatment failure (viral load >400 
+copies/mL) within 6 months before genomic sampling; and (4) proviral sequences with ambiguous clade 
+classification precluding subtype assignment. 
+ 
+Data Acquisition 
+Near-full-length proviral sequence data (FASTQ files) and associated participant metadata, including 
+QVOA reactivation outcomes and transcription profiling results, will be obtained from the Rakai Health 
+Sciences Program (RHSP) Latent Viral Reservoir Cohor t. Access to these de -identified datasets will be 
+granted through the established RHSP data request protocol, which requires submission of a study 
+proposal for review and approval by the relevant data access committee prior to release.  
+ 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 8 of 11 
+Data Processing and Analysis 
+Bioinformatic analysis will proceed in three sequential phases: 
+Phase 1 - U3 Sequence Extraction and Subtyping: Full -length proviral sequences will be processed to 
+isolate 5′ LTR U3 domains (nucleotides –454 to –1 relative to the transcription start site). Subtype 
+classification will be validated using the Los Alamos Proviral Sequence Database COMET and automated 
+phylogenetic alignment tools. 
+Phase 2 -TFBS Mapping and Abundance Quantification: Extracted U3 sequences will be scanned using 
+the FIMO tool (MEME Suite) with JASPAR 2024 PWMs for NF -κB (p50/p65), SP1, NFAT, AP -1 
+(FOS/JUN), TBP, and TFIID subunits. Output metrics will include: TFBS count per se quence, genomic 
+coordinates, binding affinity scores (log -likelihood ratio scores), and SNP -associated score deviations. 
+Standardised, reproducible R /Python/Bash scripts will be developed for all analyses and deposited on 
+GitHub. 
+Phase 3 - Statistical Correlation and Regression: TFBS abundance profiles will be correlated with QVOA 
+infectious units per million (IUPM) and baseline transcription levels using Spearman rank correlation. 
+Multivariate generalised linear models (GLMs) and mixed -effects models will assess independent 
+associations, adjusting for ART duration, baseline CD4⁺ T -cell count, pre-ART viral load set-point, sex, 
+and HIV -1 subtype. Interaction terms will test whether subtype modifies the TFBS  reactivation 
+association. 
+Data Cleaning 
+All sequence data will undergo standard quality control procedures: minimum sequence length thresholds, 
+removal of hypermutated sequences (using the Los Alamos HYPERMUT tool), and exclusion of 
+sequences with >5% ambiguous nucleotide calls in the U3 region.  Clinical metadata will be cross -
+validated against RHSP primary records for completeness, and missing data managed using complete -
+case analysis or multiple imputation where appropriate. 
+Data Security 
+All participant-linked data will be accessed only by authorised investigators through RHSP’s secure server 
+infrastructure, consistent with RHSP data governance policies. Genomic sequences will be stored in de -
+identified form, linked to participant records only through anonymised study IDs. Data transfer between 
+RHSP (Uganda) , ACE -Uganda and Western University (Canada) will be encrypted (AES -256) in 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 9 of 11 
+compliance with institutional data security standards. Access logs will be maintained for all data handling 
+activities. 
+Dissemination 
+Findings will be disseminated through: (1) an MSc thesis submitted to Makerere University; (2) 
+presentation at the Rakai Health Sciences Program scientific meeting, (3) at least one peer -reviewed 
+manuscript in a high -impact virology or HIV cure journal; ( 4) presentation at HIV conferences; and (5) 
+deposition of all bioinformatic pipelines and processed data as open -access resources on GitHub and a 
+public genomics repository.  
+ 
+Ethical considerations 
+This study will use entirely pre-existing, previously consented biological samples and associated data from 
+the RHSP LVR Cohort. Ethical approvals for the original cohort were obtained from the Institutional 
+Review Boards (IRBs) of the Uganda Virus Research Institute (UVRI), the Uganda National Council for 
+Science and Technology (UNCST), the National Institutes of Health (NIH, USA), and Western University 
+(Canada) (Kankaka et al., 2023; Prodger et al., 2017). All original participants provided written informed 
+consent at each study visit for future use of their de -identified data and samples in HIV-related research. 
+An amendment/waiver for secondary use of existing data will be sought from the UVRI and UNCST IRBs 
+prior to study commencement. Additional approval will be obtained from the Makerere University College 
+of Health Sciences School of Biomedical Sciences Research Ethics Committee in fulfillment of the 
+requirements for the conduct of a Master's thesis.  
+No new biological samples will be collected, and there will be no direct participant contact, negating the 
+need for re-consent. All data will be handled in a de-identified manner consistent with RHSP’s institutional 
+data use policies. Privacy and confident iality will be maintained through strict access controls, 
+anonymised study IDs, and encrypted data storage and transfer protocols . This study presents no greater 
+than minimal risk to participants. Findings will be reported in aggregate without participant -identifiable 
+information. 
+ 
+ 
+ 
+ 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 10 of 11 
+References 
+1. Burnett, J. C., Lim, K. I., Calafi, A., Rossi, J. J., Schaffer, D. V., & Bhatt, A. P. (2010). Combinatorial 
+latency reactivation for HIV-1 subtypes and variants. Journal of Virology, 84(12), 5958–5974. 
+2. Debrabander, Q., Bontems, S., Koch, A., & Darcis, G. (2023). The efficacy and tolerability of latency-
+reversing agents in reactivating the HIV -1 reservoir in clinical trials. Journal of Virus Eradication, 
+9(2), 100345. 
+3. Delannoy, A., Poirier, M., & Bell, B. (2019). Cat and mouse: HIV transcription in latency, immune 
+evasion, and cure/remission strategies. Viruses, 11(3), 269. 
+4. Fornes, O., Castro-Mondragon, J. A., Khan, A., van der Lee, R., Zhang, X., Richmond, P. A., ... & 
+Sandelin, A. (2020). JASPAR 2020: Update of the open-access database of transcription factor binding 
+profiles. Nucleic Acids Research, 48(D1), D87–D92. 
+5. Kankaka, E. N., Redd, A. D., Khan, A., Reynolds, S. J., Saraf, S., Kirby, C., ... & Poon, A. (2023). 
+Dating reservoir formation in virologically suppressed people living with HIV -1 in Rakai, Uganda. 
+Virus Evolution, 9(2), vead046. https://doi.org/10.1093/ve/vead046 
+6. Khanal, S., Schank, M., El Gazzar, M., Moorman, J. P., & Yao, Z. Q. (2021). HIV-1 latency and viral 
+reservoirs: Existing reversal approaches and potential technologies, targets and pathways. Vaccines, 
+9(5), 1110. 
+7. Mbondji-Wonje, C., Dong, M., Wang, X., Zhao, J., Ragupathy, V., Sanchez, A. M., ... & Hewlett, I. 
+(2018). Distinctive variation in the U3R region of the 5’ long terminal repeat from diverse HIV -1 
+strains. PLOS ONE, 13(4), e0195661. 
+8. McMyn, N. F., Varriale, J., Bhatt, N. P., Ott, S., Marsden, M., Dukhovlinova, E., ... & Margolis, D. 
+M. (2023). The latent reservoir of inducible, infectious HIV -1 does not decrease despite decades of 
+antiretroviral therapy. Journal of Clinical Investigation, 133(14), e171554. 
+9. Mumby, M., Kankaka, E., Khan, A., Redd, A. D., Quinn, T. C., Galiwango, R. M., ... & Dikeakos, J. 
+D. (2025). Association between HIV-1 Nef-mediated MHC-I downregulation and the maintenance of 
+the replication-competent latent viral reservoir in Uganda. Lancet Microbe, 6, 101044. 
+10. Pal, S., Jaiswal, V., Nala, N., & Ranga, U. (2022). Enhanced transcriptional strength of HIV-1 subtype 
+C minimizes gene expression noise and confers stability to the viral latent state. Journal of Virology, 
+97(1), e01376–22. 
+Research concept note/draft proposal – Jovita Nagawa 
+ 
+Page 11 of 11 
+11. Pereira, L. A., Bentley, K., Peeters, A., Churchill, M. J., & Deacon, N. J. (2000). A compilation of 
+cellular transcription factor interactions with the HIV-1 LTR promoter. Nucleic Acids Research, 28(3), 
+663–668. 
+12. Prodger, J. L., Lai, J., Reynolds, S. J., Keruly, J. C., Moore, R. D., Kasule, J., ... & Quinn, T. C. (2017). 
+Reduced frequency of cells latently infected with replication -competent HIV-1 in virally suppressed 
+individuals living in Rakai, Uganda. Clinical Infectious Diseases, 65(8), 1308–1315. 
+13. Prodger, J. L., Capoferri, A. A., Yu, K., Lai, J., Reynolds, S. J., Kasule, J., ... & Quinn, T. C. (2020). 
+Reduced HIV-1 latent reservoir outgrowth and distinct immune correlates among women in Rakai, 
+Uganda. JCI Insight, 5(14), e139287. 
+14. Rodari, A., Darcis, G., & Van Lint, C. M. (2021). The current status of latency reversing agents for 
+HIV-1 remission. Annual Review of Virology, 8, 491–514. 
+15. Sadri, G., Nadakal, T. T., Lauer, W., Kos, J., Singh, P. K., Elliott, E., ... & Prodger, J. L. (2026). 
+Development and validation of HIV SMRTcap for the characterisation of HIV -1 reservoirs across 
+tissues and subtypes. PLOS Pathogens, 22(1), e1013171. 
+16. Siliciano, J. D., & Siliciano, R. F. (2022). In vivo dynamics of the latent reservoir for HIV -1: New 
+insights and implications for cure. Annual Review of Pathology, 17, 271–294. 
+17. Spivak, A. M., & Planelles, V. (2018). Novel latency reversal agents for HIV-1 cure. Annual Review 
+of Medicine, 69, 421–436. 
+18. Verma, A., Rajagopalan, P., Lotke, R., Varghese, R., Selvam, D., Kundu, T. K., & Ranga, U. (2016). 
+Functional incompatibility between the generic NF -κB motif and a subtype -specific Sp1III element 
+drives the formation of the HIV-1 subtype C viral promoter. Journal of Virology, 90(16), 7046–7065. 

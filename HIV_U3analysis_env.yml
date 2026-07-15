@@ -29,3 +29,30 @@ dependencies:
 
   # PacBio circular consensus sequence calling (proxy for SMRT Link CCS)
   - pbccs
+
+  # Reference Mapping, Consensus Calling & Alignment (production pipeline steps 7/9/11)
+  - bwa
+  - minimap2
+  - samtools
+  - bcftools>=1.20  # unpinned resolved to bcftools 1.6 (2017), built against an
+                    # ancient OpenSSL 1.0.0 not present in this env -- it failed
+                    # at runtime with "libcrypto.so.1.0.0: cannot open shared
+                    # object file", silently, since the pipeline's bcftools calls
+                    # were piped through 2>/dev/null. Pin forces a modern,
+                    # mutually-compatible resolution (confirmed: bcftools 1.24).
+  - htslib
+  - mafft
+
+  # tool_comparison/ only -- not used by the production pipelines directly
+  - spades
+  - muscle
+  - clustalo
+  - iqtree=2.*     # unpinned resolves to IQ-TREE 3.x (binary "iqtree"/"iqtree3",
+                    # not "iqtree2"); the tools review specifically cites IQ-TREE 2,
+                    # and run_iqtree.sh calls the "iqtree2" binary name that this
+                    # 2.x series installs
+  - meme          # provides fimo
+  - blast         # picking the best SPAdes contig by similarity to HXB2
+  - moods         # confirmed on bioconda (package "moods", Python module MOODS)
+  - bioconductor-tfbstools
+  - bioconductor-pqsfinder

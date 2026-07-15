@@ -5,28 +5,40 @@
 
 A reproducible bioinformatics pipeline for processing, assembling, and analyzing the U3 region of HIV-1 proviral genomes. This repository contains scripts and environments to process both short-read (Illumina) and long-read (Oxford Nanopore/PacBio) sequencing data, identify intact genomes, and systematically map host transcription factor binding sites (TFBS) and G-quadruplex structures.
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```text
 /home/jnagawa/Internship/
 ├── HIV_U3analysis_env.yml        # Conda environment specification
-├── illumina_u3analysis.sh        # Illumina end-to-end pipeline (Slurm/Bash)
-├── oxnano_u3analysis.sh          # Nanopore end-to-end pipeline (Slurm/Bash)
-├── variant_call.sh               # Variant calling pipeline (BWA, SAMtools, BCFtools, SnpEff)
-├── shiver/                       # Local clone of the SHIVER assembly suite
-└── [Data Directories]            # Generated during pipeline execution (raw_data, qc_reports, etc.)
+├── scripts/
+│   ├── pipelines/                # illumina_u3analysis.sh, oxnano_u3analysis.sh (Slurm/Bash)
+│   ├── utils/                    # extract_u3_by_hxb2_anchor.sh, test_tools.sh
+│   ├── archive/                  # superseded scripts, variant_call.sh (unrelated coursework script)
+│   ├── tools/shiver/             # local clone of the SHIVER assembly suite
+│   └── tool_comparison/          # standalone tool-benchmarking harness (see its own README)
+├── data/
+│   ├── raw/{illumina,oxnano}/    # downloaded FASTQ
+│   ├── reference/                # HXB2 (K03455.1) fasta + cached GenBank record
+│   └── processed/{illumina,oxnano}/<stage>/  # trimmed/filtered, alignments, msa, subtyping, motifs
+├── results/
+│   ├── reports/qc/{illumina,oxnano}/  # FastQC/MultiQC/NanoPlot/etc. QC reports
+│   ├── figures/                  # plots generated during analysis
+│   └── tool_comparison/          # per-stage summary.tsv, timing logs, ease_of_use_notes.md
+├── writeups/                     # proposal, tools review, progress report
+├── checkpoints/                  # pipeline resume markers
+└── logs/                         # Slurm stdout/err
 ```
 
-## ⚙️ Pipeline Overview
+## Pipeline Overview
 
-The analysis workflow consists of the following key stages:
+The analysis workflow consists of the following key steps:
 1. **Quality Control & Preprocessing:** FastQC/MultiQC, Trimmomatic (Illumina), NanoPlot/Porechop/NanoFilt (Nanopore), and Kraken2 (Contamination removal).
 2. **Genome Assembly:** Reference-guided iterative assembly using **SHIVER**.
 3. **Biological Filtering:** Hypermutation detection (Poplars) and structural intactness classification (HIVSeqinR).
 4. **Alignment & Subtyping:** Multiple sequence alignment via **MAFFT**, with subtype/recombination detection using **jpHMM** and **IQ-TREE 2**.
 5. **U3 Extraction & Motif Mapping:** Coordinate-based extraction with **SeqKit**, TFBS scanning with **FIMO** & **TFBSTools**, and G-Quadruplex prediction via **gquad** and **pqsfinder**.
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 1. **Clone the repository and navigate to the directory:**
    ```bash
@@ -40,23 +52,23 @@ The analysis workflow consists of the following key stages:
    conda activate HIV_U3analysis
    ```
 
-## 💻 Usage
+## Usage
 
 The primary preprocessing pipelines are optimized for High-Performance Computing (HPC) environments using the Slurm workload manager, but can also be run locally.
 
-**Running via Slurm:**
+**Running via Slurm (from the repo root):**
 ```bash
-sbatch illumina_u3analysis.sh
-sbatch oxnano_u3analysis.sh
+sbatch scripts/pipelines/illumina_u3analysis.sh
+sbatch scripts/pipelines/oxnano_u3analysis.sh
 ```
 
-**Running Locally:**
+**Running Locally (from the repo root):**
 ```bash
-bash illumina_u3analysis.sh
-bash oxnano_u3analysis.sh
+bash scripts/pipelines/illumina_u3analysis.sh
+bash scripts/pipelines/oxnano_u3analysis.sh
 ```
 
 > **Note - Smart Resuming:** If the pipeline is interrupted, you can safely run the script again. It automatically checks for files that were already processed and picks up exactly where it left off, saving time.
 
-## 📄 License
+## License
 Developed for academic research purposes as part of an MSc Bioinformatics internship at Makerere University.

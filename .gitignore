@@ -27,12 +27,12 @@
 #  Data directories created by the scripts
 # ----------------------------------------------------------------------------
 # Nanopore pipeline (qc_u3analyis.sh)
-raw_data/
-filtered_data/
+data/raw/oxnano/
+data/processed/oxnano/filtered/
 
 # Illumina pipeline (qc_illumina_u3analysis.sh)
-illumina_raw_data/
-illumina_trimmed_data/
+data/raw/illumina/
+data/processed/illumina/trimmed/
 
 # SRA prefetch caches (in case the default ~/ncbi location is used)
 ncbi/
@@ -54,6 +54,20 @@ slurm-*.err
 *.log
 
 # ----------------------------------------------------------------------------
+#  tool_comparison harness -- third-party clones/downloads (regenerable via
+#  each stage's setup_*.sh) and per-tool run outputs. summary.tsv and
+#  ease_of_use_notes.md are the actual deliverables and are NOT matched by
+#  any rule below, so they stay tracked.
+# ----------------------------------------------------------------------------
+scripts/tool_comparison/04_biological_filtering/tools/
+scripts/tool_comparison/05_subtyping/tools/
+scripts/tool_comparison/06_motif_mapping/jaspar/
+results/tool_comparison/**/*_out
+results/tool_comparison/**/*_out.*
+results/tool_comparison/**/*_positive_control*
+results/tool_comparison/**/*.time
+
+# ----------------------------------------------------------------------------
 #  Environment / editor / OS cruft
 # ----------------------------------------------------------------------------
 __pycache__/
@@ -65,4 +79,6 @@ __pycache__/
 *~
 .vscode/
 .idea/
-shiver/
+scripts/tools/shiver/
+Internship/
+test_tools.sh variant_call.sh *.docx

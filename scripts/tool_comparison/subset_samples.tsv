@@ -1,0 +1,16 @@
+platform	accession	combined_size_mb	rationale
+illumina	SRR908437	21	smallest Illumina pair, cheap fast-path sanity check
+illumina	SRR908434	58	lower-quartile-ish Illumina pair
+illumina	SRR908441	127	upper-quartile-ish Illumina pair
+illumina	SRR908446	478	largest Illumina pair, stresses runtime/memory scaling
+nanopore	SRR16005717	598	smallest Nanopore sample
+nanopore	SRR16005712	1311	median Nanopore sample
+nanopore	SRR16005715	1880	largest Nanopore sample, stresses runtime/memory scaling
+
+# Chosen by file-size quartile spread (a complexity/read-depth proxy, not a
+# subtype proxy -- all 24/9 raw files are already downloaded, so this costs
+# zero new downloads). If per-sample subtype labels are available from the
+# source publications (PRJNA207834, PRJNA765218), it's worth a manual check
+# that these 7 samples span A1/D/recombinant diversity before relying on
+# them for the assembly/MSA/subtyping comparisons -- not something derivable
+# from the raw read data alone.
