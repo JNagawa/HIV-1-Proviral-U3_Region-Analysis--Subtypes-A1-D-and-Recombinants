@@ -32,7 +32,8 @@ data/processed/oxnano/filtered/
 
 # Illumina pipeline (qc_illumina_u3analysis.sh)
 data/raw/illumina/
-data/processed/illumina/trimmed/
+data/processed/illumina/trimmed_trimmomatic/
+data/processed/illumina/trimmed_fastp/
 
 # SRA prefetch caches (in case the default ~/ncbi location is used)
 ncbi/
@@ -54,18 +55,55 @@ slurm-*.err
 *.log
 
 # ----------------------------------------------------------------------------
-#  tool_comparison harness -- third-party clones/downloads (regenerable via
-#  each stage's setup_*.sh) and per-tool run outputs. summary.tsv and
+#  Tool comparison harness -- third-party clones/downloads (regenerable via
+#  each step's setup_*.sh) and per-tool run outputs. summary.tsv and
 #  ease_of_use_notes.md are the actual deliverables and are NOT matched by
-#  any rule below, so they stay tracked.
+#  any rule below, so they stay tracked. scripts/tools/shiver/ is covered
+#  further down alongside the other scripts/tools/* third-party clones.
 # ----------------------------------------------------------------------------
-scripts/tool_comparison/04_biological_filtering/tools/
-scripts/tool_comparison/05_subtyping/tools/
-scripts/tool_comparison/06_motif_mapping/jaspar/
-results/tool_comparison/**/*_out
-results/tool_comparison/**/*_out.*
-results/tool_comparison/**/*_positive_control*
-results/tool_comparison/**/*.time
+scripts/tools/Poplars/
+scripts/tools/HIVSeqinR/
+scripts/tools/HIVIntact/
+scripts/tools/jpHMM/
+data/reference/jaspar/
+results/download_qc/illumina/**/*_out
+results/download_qc/illumina/**/*_out.*
+results/assembly/illumina/**/*_out
+results/assembly/illumina/**/*_out.*
+results/msa/illumina/**/*_out
+results/msa/illumina/**/*_out.*
+results/biological_filtering/illumina/**/*_out
+results/biological_filtering/illumina/**/*_out.*
+results/subtyping/illumina/**/*_out
+results/subtyping/illumina/**/*_out.*
+results/motif_mapping/illumina/**/*_out
+results/motif_mapping/illumina/**/*_out.*
+results/motif_mapping/illumina/**/*_positive_control*
+results/download_qc/illumina/**/*.time
+results/assembly/illumina/**/*.time
+results/msa/illumina/**/*.time
+results/biological_filtering/illumina/**/*.time
+results/subtyping/illumina/**/*.time
+results/motif_mapping/illumina/**/*.time
+results/download_qc/oxfordnano/**/*_out
+results/download_qc/oxfordnano/**/*_out.*
+results/assembly/oxfordnano/**/*_out
+results/assembly/oxfordnano/**/*_out.*
+results/msa/oxfordnano/**/*_out
+results/msa/oxfordnano/**/*_out.*
+results/biological_filtering/oxfordnano/**/*_out
+results/biological_filtering/oxfordnano/**/*_out.*
+results/subtyping/oxfordnano/**/*_out
+results/subtyping/oxfordnano/**/*_out.*
+results/motif_mapping/oxfordnano/**/*_out
+results/motif_mapping/oxfordnano/**/*_out.*
+results/motif_mapping/oxfordnano/**/*_positive_control*
+results/download_qc/oxfordnano/**/*.time
+results/assembly/oxfordnano/**/*.time
+results/msa/oxfordnano/**/*.time
+results/biological_filtering/oxfordnano/**/*.time
+results/subtyping/oxfordnano/**/*.time
+results/motif_mapping/oxfordnano/**/*.time
 
 # ----------------------------------------------------------------------------
 #  Environment / editor / OS cruft

@@ -11,19 +11,26 @@ A reproducible bioinformatics pipeline for processing, assembling, and analyzing
 /home/jnagawa/Internship/
 ├── HIV_U3analysis_env.yml        # Conda environment specification
 ├── scripts/
-│   ├── pipelines/                # illumina_u3analysis.sh, oxnano_u3analysis.sh (Slurm/Bash)
+│   ├── pipelines/                # illumina_u3analysis.sh, oxnano_u3analysis.sh (Slurm/Bash),
+│   │                             # plus the newer per-step illumina/01_download_qc_trim.sh etc.
 │   ├── utils/                    # extract_u3_by_hxb2_anchor.sh, test_tools.sh
 │   ├── archive/                  # superseded scripts, variant_call.sh (unrelated coursework script)
-│   ├── tools/shiver/             # local clone of the SHIVER assembly suite
-│   └── tool_comparison/          # standalone tool-benchmarking harness (see its own README)
+│   ├── tools/                    # third-party clones: shiver/, jpHMM/, Poplars/, HIVSeqinR/, HIVIntact/
+│   ├── common/                   # tool-comparison harness's shared lib_compare.sh + its own README
+│   └── download_qc_illumina/, assembly_illumina/, msa_illumina/, biological_filtering_illumina/,
+│       subtyping_illumina/, motif_mapping_illumina/
+│                                 # tool-comparison harness, one step per folder (see scripts/common/README.md);
+│                                 # _illumina since there's no Nanopore side yet (would be _oxnano, matching below)
 ├── data/
 │   ├── raw/{illumina,oxnano}/    # downloaded FASTQ
-│   ├── reference/                # HXB2 (K03455.1) fasta + cached GenBank record
+│   ├── reference/                # HXB2 (K03455.1) fasta + cached GenBank record + jaspar/ PWM downloads
 │   └── processed/{illumina,oxnano}/<stage>/  # trimmed/filtered, alignments, msa, subtyping, motifs
 ├── results/
 │   ├── reports/qc/{illumina,oxnano}/  # FastQC/MultiQC/NanoPlot/etc. QC reports
 │   ├── figures/                  # plots generated during analysis
-│   └── tool_comparison/          # per-stage summary.tsv, timing logs, ease_of_use_notes.md
+│   └── download_qc_illumina/, assembly_illumina/, msa_illumina/, biological_filtering_illumina/,
+│       subtyping_illumina/, motif_mapping_illumina/
+│                                 # tool-comparison harness output: per-step summary.tsv, timing logs, ease_of_use_notes.md
 ├── writeups/                     # proposal, tools review, progress report
 ├── checkpoints/                  # pipeline resume markers
 └── logs/                         # Slurm stdout/err

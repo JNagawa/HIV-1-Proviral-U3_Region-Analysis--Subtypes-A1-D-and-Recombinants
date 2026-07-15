@@ -1,0 +1,7 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+download_qc_illumina	fastp	SRR908437	1.12		0	1	120260 reads passed	(see ease_of_use_notes.md)
+download_qc_illumina	trimmomatic	SRR908437	3.24		0	1	13.54% surviving	(see ease_of_use_notes.md)
+download_qc_illumina	fastp	SRR908434	1.63		0	1	327554 reads passed	(see ease_of_use_notes.md)
+download_qc_illumina	trimmomatic	SRR908434	4.49		0	1	12.33% surviving	(see ease_of_use_notes.md)
+download_qc_illumina	fastp	SRR908441	2.90		0	1	690358 reads passed	(see ease_of_use_notes.md)
+download_qc_illumina	trimmomatic	SRR908441	7.76		0	1	28.43% surviving	(see ease_of_use_notes.md)
