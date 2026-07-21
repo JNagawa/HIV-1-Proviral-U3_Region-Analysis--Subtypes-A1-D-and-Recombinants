@@ -1,7 +1,7 @@
 stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
-motif_mapping_illumina	fimo	positive_control	0.00		126	0	0 hits	(see ease_of_use_notes.md)
-motif_mapping_illumina	fimo	all_subset	0.00		126	0	0 hits	(see ease_of_use_notes.md)
-motif_mapping_illumina	moods	positive_control	0.00		126	0	0 hits	(see ease_of_use_notes.md)
-motif_mapping_illumina	moods	all_subset	0.00		126	0	0 hits	(see ease_of_use_notes.md)
-motif_mapping_illumina	tfbstools	positive_control	0.00		126	0	0 hits	(see ease_of_use_notes.md)
-motif_mapping_illumina	tfbstools	all_subset	0.00		126	0	0 hits	(see ease_of_use_notes.md)
+motif_mapping_illumina	fimo	positive_control	0.14		0	1	4 hits	(see ease_of_use_notes.md)
+motif_mapping_illumina	fimo	all_subset	0.17		0	1	16 hits	(see ease_of_use_notes.md)
+motif_mapping_illumina	moods	positive_control	0.73		0	1	2 hits	(see ease_of_use_notes.md)
+motif_mapping_illumina	moods	all_subset	0.99		0	1	10 hits	(see ease_of_use_notes.md)
+motif_mapping_illumina	tfbstools	positive_control	20.17		0	1	14 hits	(see ease_of_use_notes.md)
+motif_mapping_illumina	tfbstools	all_subset	15.78		0	1	70 hits	(see ease_of_use_notes.md)

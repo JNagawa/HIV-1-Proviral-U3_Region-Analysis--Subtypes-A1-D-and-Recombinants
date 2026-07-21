@@ -6,5 +6,5 @@
 set -uo pipefail
 SEQS="$1" OUT="$2"
 STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${STAGE_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
 moods-dna.py -m "${REPO_ROOT}"/data/reference/jaspar/MA*.pfm -s "${SEQS}" -p 0.0001 > "${OUT}"

@@ -9,7 +9,7 @@
 #     called `proviral`)
 set -euo pipefail
 STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${STAGE_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
 mkdir -p "${REPO_ROOT}/scripts/tools"
 cd "${REPO_ROOT}/scripts/tools"
 
@@ -25,6 +25,10 @@ fi
 if [ ! -d HIVIntact ]; then
     git clone --recurse-submodules https://github.com/ramics/HIVIntact.git
     python3 -m venv HIVIntact/env
+    # Python 3.12's venv module no longer bundles setuptools, but the
+    # installed `proviral` CLI imports pkg_resources (from setuptools) --
+    # confirmed by the ModuleNotFoundError this throws without it.
+    HIVIntact/env/bin/pip install setuptools
     HIVIntact/env/bin/pip install ./HIVIntact
 fi
 

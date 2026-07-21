@@ -21,7 +21,7 @@ set -uo pipefail
 IN="$1" OUTDIR="$2"
 
 STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${STAGE_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
 HIVSEQINR_DIR="${REPO_ROOT}/scripts/tools/HIVSeqinR"
 CONFIGURED_MARKER="${HIVSEQINR_DIR}/.CONFIGURED"
 

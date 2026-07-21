@@ -1,10 +1,9 @@
 #!/bin/bash
 # Assembly step of the tool-comparison harness: BWA+bcftools-consensus vs
 # SPAdes vs SHIVER on the Illumina subset -- one script for all three
-# assemblers and their comparison (no separate run_<tool>.sh wrappers).
-# Uses each sample's fastp-trimmed reads from download_qc if available
-# (the review recommends fastp before assembly), else falls back to raw
-# reads with a warning.
+# assemblers and their comparison.
+# Uses each sample's fastp-trimmed reads from download_qc if available, 
+# else falls back to raw reads with a warning.
 # Usage: ./compare_assembly_illumina.sh
 set -uo pipefail
 
@@ -21,8 +20,8 @@ mkdir -p "${RESULTS_DIR}"
 [ -f "${RESULTS_DIR}/ease_of_use_notes.md" ] || cp "${REPO_ROOT}/scripts/common/ease_of_use_template.md" "${RESULTS_DIR}/ease_of_use_notes.md"
 
 # bwa mem requires the reference pre-indexed (bwa index) -- unlike
-# minimap2/SPAdes, it errors out immediately without it. Index once here
-# rather than assuming the production pipeline's own Step 7 already did it.
+# minimap2/SPAdes, it errors out immediately without it, so we index it once here
+
 if [ ! -s "${REF_FASTA}.bwt" ]; then
     bwa index "${REF_FASTA}" > "${RESULTS_DIR}/bwa_index.log" 2>&1
 fi
@@ -94,13 +93,25 @@ run_spades() {
 }
 export -f run_spades
 
-# SHIVER assembly (the review's top pick, to avoid reference bias on
-# divergent A1/D/recombinant genomes). A 3-step chain, not a single tool
-# call: assemble contigs (SPAdes) -> shiver_align_contigs.sh ->
-# shiver_map_reads.sh. shiver_align_contigs.sh/shiver_map_reads.sh write
-# their outputs relative to the current working directory (no output-dir
-# argument), so this runs in a subshell ( ... ) -- the cd below only
-# affects that subshell, never this script's own working directory.
+
+# SHIVER assembly uses a curated multi-subtype reference to avoid reference bias on
+# divergent A1/D/recombinant genomes).
+# This handles the fact that Ugandan HIV samples (subtype A1, D, or A/D
+# recombinants) differ a lot from HXB2. Instead of forcing every sample onto
+# the same reference, it builds a custom reference for each sample from a
+# panel of many subtypes so the mapping isn't skewed toward HXB2.
+# Three steps run in order:
+#   1. SPAdes assembles the reads into contigs
+#   2. shiver_align_contigs.sh cleans up the contigs and aligns them to
+#      the reference panel
+#   3. shiver_map_reads.sh maps the reads to the sample-specific reference
+#
+# Quirk: the two SHIVER scripts don't take an output directory. They just
+# dump files into whatever folder you're standing in. To keep each sample's
+# output in its own place, we wrap the whole thing in ( ... ) and 'cd' into
+# the sample folder inside it. The parentheses run everything in a subshell,
+# so the 'cd' only applies there -- the main script stays put.
+
 run_shiver() {
     local srr="$1" r1="$2" r2="$3" outdir="$4" setup_dir="$5" shiver_bin="$6" shiver_data_dir="$7"
     local ref_alignment="${setup_dir}/HIV1_COM_ref_alignment.fasta"

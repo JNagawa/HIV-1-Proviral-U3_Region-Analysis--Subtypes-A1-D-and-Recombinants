@@ -44,8 +44,15 @@ dependencies:
   - mafft
 
   # tool_comparison/ only -- not used by the production pipelines directly
-  - spades
-  - muscle
+  - spades=3.15.5   # unpinned resolves to 4.3.0, whose spades-hammer binary
+                    # crashes with SIGILL ("OS return value: -4") on this
+                    # node's CPU (AVX+SSE4.2, no AVX2/FMA). 3.15.5 (last
+                    # pre-4.x release, predates its k-mer-counting rewrite)
+                    # confirmed to run to completion on this hardware.
+  - muscle=3.8*     # unpinned resolves to 5.3, which crashes with SIGILL
+                    # ("Illegal instruction", exit 132) on this node's CPU
+                    # for the same AVX2/FMA reason as spades above. Classic
+                    # MUSCLE 3.8 has no AVX2 requirement.
   - clustalo
   - iqtree=2.*     # unpinned resolves to IQ-TREE 3.x (binary "iqtree"/"iqtree3",
                     # not "iqtree2"); the tools review specifically cites IQ-TREE 2,

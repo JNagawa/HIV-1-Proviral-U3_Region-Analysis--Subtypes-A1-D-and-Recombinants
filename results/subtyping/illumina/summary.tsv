@@ -1,6 +1,6 @@
 stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
-subtyping_illumina	jphmm	SRR908437	0.03		1	0	n/a	(see ease_of_use_notes.md)
-subtyping_illumina	jphmm	SRR908434	0.02		1	0	n/a	(see ease_of_use_notes.md)
-subtyping_illumina	jphmm	SRR908441	0.02		1	0	n/a	(see ease_of_use_notes.md)
-subtyping_illumina	jphmm	SRR908446	0.02		1	0	n/a	(see ease_of_use_notes.md)
-subtyping_illumina	iqtree2	all_subset	0.89		2	0	n/a	(see ease_of_use_notes.md)
+subtyping_illumina	jphmm	SRR908437	145.89		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/illumina/jphmm_out/SRR908437/posterior_recombination_path.txt	(see ease_of_use_notes.md)
+subtyping_illumina	jphmm	SRR908434	138.10		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/illumina/jphmm_out/SRR908434/posterior_recombination_path.txt	(see ease_of_use_notes.md)
+subtyping_illumina	jphmm	SRR908441	138.93		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/illumina/jphmm_out/SRR908441/posterior_recombination_path.txt	(see ease_of_use_notes.md)
+subtyping_illumina	jphmm	SRR908446	143.25		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/illumina/jphmm_out/SRR908446/posterior_recombination_path.txt	(see ease_of_use_notes.md)
+subtyping_illumina	iqtree2	all_subset	0.58		0	1	tree written, 0 bootstrap refs	(see ease_of_use_notes.md)

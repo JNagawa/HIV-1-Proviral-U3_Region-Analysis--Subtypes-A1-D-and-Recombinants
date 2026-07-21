@@ -55,14 +55,14 @@ append_summary_row "biological_filtering_illumina" "hivseqinr" "all_subset" "${W
 echo "=== HIVIntact ==="
 OUTDIR="${RESULTS_DIR}/hivintact_out"
 TIMELOG="${RESULTS_DIR}/hivintact.time"
-measure_and_run "${TIMELOG}" -- "${STAGE_DIR}/run_hivintact.sh" "${INPUT_FASTA}" "${OUTDIR}" B > "${RESULTS_DIR}/hivintact_wrapper.log" 2>&1
+measure_and_run "${TIMELOG}" -- "${STAGE_DIR}/run_hivintact.sh" "${INPUT_FASTA}" "${OUTDIR}" A1 > "${RESULTS_DIR}/hivintact_wrapper.log" 2>&1
 EXIT_CODE=$?
 parse_time_metrics "${TIMELOG}"
 VALID=0; METRIC="n/a"
 if [ -s "${OUTDIR}/intact.fasta" ] || [ -s "${OUTDIR}/nonintact.fasta" ]; then
     VALID=1
-    N_INTACT=$(grep -c "^>" "${OUTDIR}/intact.fasta" 2>/dev/null || echo 0)
-    N_NONINTACT=$(grep -c "^>" "${OUTDIR}/nonintact.fasta" 2>/dev/null || echo 0)
+    N_INTACT=$(grep -c "^>" "${OUTDIR}/intact.fasta" 2>/dev/null); N_INTACT="${N_INTACT:-0}"
+    N_NONINTACT=$(grep -c "^>" "${OUTDIR}/nonintact.fasta" 2>/dev/null); N_NONINTACT="${N_NONINTACT:-0}"
     METRIC="${N_INTACT} intact, ${N_NONINTACT} non-intact"
 fi
 append_summary_row "biological_filtering_illumina" "hivintact" "all_subset" "${WALLCLOCK_SEC}" "${PEAK_RSS_MB}" "${EXIT_CODE}" "${VALID}" "${METRIC}"

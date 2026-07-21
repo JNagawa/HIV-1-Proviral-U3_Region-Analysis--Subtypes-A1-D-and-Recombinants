@@ -191,9 +191,9 @@ END {
         uslice_arr[i] = uslice
 
         print ">" ids[i] >> out_gapped
-        print gslice[i] >> out_gapped
+        print toupper(gslice[i]) >> out_gapped
         print ">" ids[i] >> out
-        print uslice >> out
+        print toupper(uslice) >> out
     }
     close(out_gapped)
     close(out)

@@ -4,5 +4,5 @@
 set -uo pipefail
 SEQS="$1" OUTDIR="$2"
 STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${STAGE_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
 fimo --oc "${OUTDIR}" --thresh 1e-4 "${REPO_ROOT}/data/reference/jaspar/core6_pfms.meme" "${SEQS}"

@@ -1,5 +1,12 @@
 # SHIVER reference alignment -- manual acquisition step
 
+**STATUS (2026-07-21): still outstanding.** This blocks SHIVER in
+`compare_assembly_illumina.sh` (and the production pipeline's step 8/10/11
+if SHIVER is ever wired in there) -- steps 1-3 below need a human to visit
+the LANL form and download the alignment; nothing further here can be
+automated. Everything else in the Illumina comparison harness has been
+fixed/re-run as of this date; this is the one remaining manual blocker.
+
 `shiver_init.sh` requires a curated alignment of existing HIV-1 reference
 sequences (its 3rd positional argument) covering the diversity you might
 find in your samples. This is **not scriptable** from this environment --
@@ -15,7 +22,7 @@ is a one-time manual step:
    subtypes + recombinants (CRF/URF), one sequence per patient, format =
    FASTA.
 3. Download the result and place it here as
-   `scripts/assembly_illumina/shiver_setup/HIV1_COM_ref_alignment.fasta`
+   `scripts/assembly/illumina/shiver_setup/HIV1_COM_ref_alignment.fasta`
    (this filename is what `run_shiver.sh` expects; it's gitignored like all
    other `*.fasta` files in this repo, so it stays untracked -- record here
    once downloaded: exact URL used, selection filters, and download date,

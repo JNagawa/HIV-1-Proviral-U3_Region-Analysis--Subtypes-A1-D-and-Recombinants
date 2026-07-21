@@ -16,7 +16,7 @@ SRR="$1" R1="$2" R2="$3" OUTDIR="$4"
 
 STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
 SETUP_DIR="${STAGE_DIR}/shiver_setup"
-REPO_ROOT="$(cd "${STAGE_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
 SHIVER_BIN="${REPO_ROOT}/scripts/tools/shiver/bin"
 
 REF_ALIGNMENT="${SETUP_DIR}/HIV1_COM_ref_alignment.fasta"

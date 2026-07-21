@@ -4,7 +4,14 @@
 #   source "$(dirname "$0")/../common/lib_compare.sh"
 
 # Wraps a command with GNU time -v (wall-clock + peak RSS) when available,
-# falling back to the bash builtin `time` (coarser, no RSS) otherwise.
+# falling back to a wall-clock-only measurement (coarser, no RSS) otherwise.
+#
+# The fallback does NOT use `{ time "$@"; } 2>"${timelog}"`: that idiom
+# redirects the wrapped command's own stderr into the timelog too (it shares
+# fd 2 with `time`'s own report inside the group), silently swallowing every
+# tool's real error output into the .time file instead of the caller's
+# .log file. Timing via `date` instead leaves the command's stdout/stderr
+# completely untouched.
 # Usage: measure_and_run <timelog_path> -- <command...>
 measure_and_run() {
     local timelog="$1"
@@ -12,10 +19,16 @@ measure_and_run() {
     if [ "$1" = "--" ]; then shift; fi
     if command -v /usr/bin/time >/dev/null 2>&1; then
         /usr/bin/time -v -o "${timelog}" "$@"
+        return $?
     else
-        { time "$@"; } 2>"${timelog}"
+        local start end rc
+        start=$(date +%s.%N)
+        "$@"
+        rc=$?
+        end=$(date +%s.%N)
+        awk -v s="${start}" -v e="${end}" 'BEGIN{d=e-s; printf "real\t%dm%.3fs\n", int(d/60), d-int(d/60)*60}' > "${timelog}"
+        return ${rc}
     fi
-    return $?
 }
 
 # Extracts wall-clock seconds and peak RSS (MB) from a timing file into
