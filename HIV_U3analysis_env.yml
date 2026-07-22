@@ -45,6 +45,12 @@ dependencies:
                     # mutually-compatible resolution (confirmed: bcftools 1.24).
   - htslib
   - mafft
+  - bc              # SHIVER's shiver_funcs.sh uses `bc` to validate float config
+                    # values (MaxContigGappiness/MinContigHitFrac) in
+                    # shiver_init.sh. The compute nodes' image has no `bc`
+                    # (only the login node does), so without this SHIVER quits
+                    # at init with "bc: command not found" -- the blocker hit
+                    # after the LANL reference-alignment one was resolved.
 
   # tool_comparison/ only -- not used by the production pipelines directly
   - spades=3.15.5   # unpinned resolves to 4.3.0, whose spades-hammer binary
@@ -57,6 +63,16 @@ dependencies:
                     # for the same AVX2/FMA reason as spades above. Classic
                     # MUSCLE 3.8 has no AVX2 requirement.
   - clustalo
+  - hifiasm         # PacBio arm: de novo HiFi assembler, compared against
+                    # minimap2->HXB2 + bcftools-consensus in
+                    # scripts/assembly/pacbio/compare_assembly_pacbio.sh. The
+                    # tools review names no long-read de novo assembler, so
+                    # hifiasm (the standard for PacBio HiFi) is the de novo
+                    # counterpart to SHIVER/SPAdes on the Illumina arm.
+  - chopper         # PacBio arm: fast Rust long-read length/quality filter,
+                    # compared against NanoFilt (legacy) and fastp in
+                    # scripts/download_qc/pacbio/download_qc_pacbio.sh. Scripts
+                    # skip it gracefully if the solver can't place it.
   - iqtree=2.*     # unpinned resolves to IQ-TREE 3.x (binary "iqtree"/"iqtree3",
                     # not "iqtree2"); the tools review specifically cites IQ-TREE 2,
                     # and run_iqtree.sh calls the "iqtree2" binary name that this

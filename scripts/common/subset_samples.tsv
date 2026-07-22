@@ -6,6 +6,12 @@ illumina	SRR908446	478	largest Illumina pair, stresses runtime/memory scaling
 nanopore	SRR16005717	598	smallest Nanopore sample
 nanopore	SRR16005712	1311	median Nanopore sample
 nanopore	SRR16005715	1880	largest Nanopore sample, stresses runtime/memory scaling
+pacbio	124_4	0.3	user-provided host-N-masked HIV-SMRTcap HiFi (41 CCS reads, ~57% host-N); data/raw/pacbio/local_masked/
+pacbio	128_5	0.4	user-provided host-N-masked HIV-SMRTcap HiFi (75 CCS reads, ~0.2% host-N, near-full proviral reads)
+pacbio	203_3	0.2	user-provided host-N-masked HIV-SMRTcap HiFi (19 CCS reads, ~78% host-N)
+pacbio	211_0	0.2	user-provided host-N-masked HIV-SMRTcap HiFi (30 CCS reads, ~43% host-N)
+# SRA QC-comparison download set (separate, driven by download_pacbio.slurm.sh, not the analysis subset above):
+#   SRR33251355/58/57 (Rakai donor13/17), SRR33168808 (92UG_029=A1), SRR33168806 (93UG_065=D)
 
 # Chosen by file-size quartile spread (a complexity/read-depth proxy, not a
 # subtype proxy -- all 24/9 raw files are already downloaded, so this costs
@@ -14,3 +20,19 @@ nanopore	SRR16005715	1880	largest Nanopore sample, stresses runtime/memory scali
 # that these 7 samples span A1/D/recombinant diversity before relying on
 # them for the assembly/MSA/subtyping comparisons -- not something derivable
 # from the raw read data alone.
+#
+# PacBio (HIV-SMRTcap, PRJNA1251704 + PRJNA1252688): unlike the two Illumina/
+# Nanopore projects, these are NOT pre-downloaded -- scripts/download_qc/
+# pacbio/download_pacbio.slurm.sh fetches exactly the accessions listed above.
+# Subtype is NOT in the SRA metadata, so "A1/D/recombinants only" is applied
+# by cohort membership, not a metadata field: the RAKAIUG_donor* runs are the
+# Rakai Uganda cohort (the A1/D/recombinant target population per Lee et al.
+# 2024, Nat Commun 15:5513), and are the actual analysis samples; their exact
+# subtype is what the subtyping step determines. 92UG_029 (subtype A/A1) and
+# 93UG_065 (subtype D) are LANL Ugandan reference isolates included as
+# known-subtype anchors/positive controls. Deliberately EXCLUDED as non-A1/D
+# controls: 89BZ_167 (B), 93MW_965 (C), 8e5* / 10011_BR / MHBB676HT / PDX /
+# HOPE cell-line and control libraries. The three ~18GB Revio Rakai runs
+# (SRR33251361/56/52) are omitted from this cheap tier to keep the subset
+# download/runtime modest; add them for a scale-stress test once tool choices
+# are settled.

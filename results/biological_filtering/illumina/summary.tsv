@@ -1,4 +1,4 @@
 stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
-biological_filtering_illumina	poplars	all_subset	3.95		0	1	9527 result rows	(see ease_of_use_notes.md)
-biological_filtering_illumina	hivseqinr	all_subset	0.03		1	0	n/a	(see ease_of_use_notes.md)
-biological_filtering_illumina	hivintact	all_subset	41.98		0	1	0 intact, 5 non-intact	(see ease_of_use_notes.md)
+biological_filtering_illumina	poplars	all_subset	20.81		0	1	9527 result rows	(see ease_of_use_notes.md)
+biological_filtering_illumina	hivseqinr	all_subset	0.10		1	0	n/a	(see ease_of_use_notes.md)
+biological_filtering_illumina	hivintact	all_subset	141.82		0	1	0 intact, 5 non-intact	(see ease_of_use_notes.md)

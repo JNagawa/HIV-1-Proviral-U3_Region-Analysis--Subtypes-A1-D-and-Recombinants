@@ -61,6 +61,24 @@ Filled in 2026-07-21, after fixing and re-running all three tools on the
   would miss by construction (novel insertions, structural variants) but
   its instability at lower coverage means it can't replace the
   reference-guided approach for this cohort's shallower samples.
+- **Update (2026-07-22) -- effect of adding Kraken2 contamination
+  filtering upstream**: once `download_qc_illumina` started feeding
+  Kraken2-filtered reads into this step, SPAdes's best-BLAST-hit contig
+  dropped to invalid length on **all 4** subset samples (420-1786bp),
+  including SRR908446, which previously produced the one valid
+  full-length assembly (9,228bp) pre-filtering. Cross-checked against
+  the Kraken2 reports directly: SRR908446 genuinely carries ~40% human +
+  4.6% bacterial reads (vs. ~4.5%/2.2% for a low-contamination sample
+  like SRR908437), so the filtering itself is correct, not a
+  misclassification bug -- removing ~45% of that sample's reads simply
+  dropped effective coverage below what SPAdes needs for a clean
+  assembly graph on this data. Confirms and sharpens the
+  coverage-sensitivity finding above: contamination *removal* can hurt
+  de novo assembly quality even as it improves data cleanliness, for
+  the more host-contaminated samples in this cohort. BWA+consensus
+  (reference-guided) was unaffected -- still 9,719bp/0% N on all 4
+  samples with the Kraken2-filtered reads -- reinforcing it as the
+  right primary choice regardless of per-sample contamination level.
 
 ## SHIVER
 

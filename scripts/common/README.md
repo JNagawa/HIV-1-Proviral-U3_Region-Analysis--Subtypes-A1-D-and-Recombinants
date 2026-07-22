@@ -79,6 +79,50 @@ minimap2 for Nanopore data -- its assembly recommendations are Illumina
 (SHIVER/SPAdes/BWA) and PacBio (SMRT Link ccs) only. The Nanopore arm only
 needed the production-script correctness fixes, not a comparison.
 
+## PacBio (HIV-SMRTcap) arm
+
+A parallel harness under `scripts/<step>/pacbio/` + `results/<step>/pacbio/`,
+same shape as the Illumina arm, for the HIV-SMRTcap long-read (PacBio HiFi)
+data. Data source: SRA BioProjects PRJNA1251704 + PRJNA1252688 (Lee et al.
+2024, Nat Commun 15:5513). These are NOT pre-downloaded -- unlike the Illumina/
+Nanopore raw files -- so the first step fetches them.
+
+Subtype is not in the SRA metadata, so "A1/D/recombinants only" is applied by
+cohort membership: the `RAKAIUG_donor*` runs are the Rakai Uganda cohort (the
+A1/D/recombinant target population), 92UG_029 (subtype A/A1) and 93UG_065
+(subtype D) are known-subtype reference anchors, and the subtype-B/C reference
+strains + cell-line controls are excluded. See `subset_samples.tsv` for the
+exact accessions and rationale. The actual per-sample A1/D/recombinant call is
+what the subtyping step produces.
+
+The SMRTcap data is already HiFi/CCS (the SMRT Link `ccs` step is done before
+SRA deposition), so the arm starts from HiFi reads, not raw subreads. The QC
+recommendation (NanoPlot) and platform-agnostic downstream tools are taken
+straight from the tools review; long-read swaps replace the Illumina-specific
+tools. Steps and comparisons:
+
+| Dir | Script | Compares | Notes |
+|---|---|---|---|
+| (download) | `download_qc/pacbio/download_pacbio.slurm.sh` | -- | `sbatch` job: prefetch + fasterq-dump the subset into `data/raw/pacbio/`. Multi-GB HiFi, so its own job. |
+| `download_qc/pacbio` | `download_qc_pacbio.sh` | NanoFilt vs fastp vs chopper (filter); fastp vs seqkit (dedup) | NanoPlot QC + single-end Kraken2 host removal (`utils/kraken2_filter_reads_se.sh`) between them. |
+| `proviral_extraction/pacbio` | `extract_provirus_pacbio.sh` | (single method) | **The special step.** N-masks host flanks (minimap2->HXB2, soft-clip = host) then strips them with `utils/extract_provirus_strip_hostN.sh` to recover the ACGT proviral core. `PROVIRUS_INPUT_MASKED=1` skips masking if input is already host-N-masked. |
+| `assembly/pacbio` | `compare_assembly_pacbio.sh` | minimap2->HXB2 consensus vs hifiasm | reference-guided vs de novo, mirroring Illumina bwa-vs-SPAdes. hifiasm is the HiFi de novo assembler (review names none). |
+| `msa/pacbio` | `compare_msa_pacbio.sh` | MAFFT vs MUSCLE vs Clustal Omega | reuses `scripts/msa/illumina/run_*.sh`. |
+| `biological_filtering/pacbio` | `compare_biological_filtering_pacbio.sh` | Poplars vs HIVSeqinR vs HIVIntact | reuses `scripts/biological_filtering/illumina/run_*.sh` + the shared `scripts/tools/` clones. |
+| `subtyping/pacbio` | `compare_subtyping_pacbio.sh` | jpHMM vs IQ-TREE2 | reuses `scripts/subtyping/illumina/run_*.sh`. Determines each sample's A1/D/recombinant subtype. |
+| `motif_mapping/pacbio` | `compare_motif_mapping_pacbio.sh` | FIMO vs MOODS vs TFBSTools; gquad vs pqsfinder | reuses `scripts/motif_mapping/illumina/run_*.sh` + shared U3 extraction util. |
+
+The four downstream steps (msa, biological_filtering, subtyping, motif_mapping)
+are platform-agnostic -- they operate on assembled FASTA -- so the PacBio
+orchestrators reuse the Illumina arm's `run_<tool>.sh` scripts unchanged and
+only differ in input/output paths. Run order:
+`download_pacbio.slurm.sh` -> `download_qc_pacbio.sh` ->
+`extract_provirus_pacbio.sh` -> `compare_assembly_pacbio.sh` ->
+`compare_msa_pacbio.sh` -> `compare_biological_filtering_pacbio.sh` /
+`compare_subtyping_pacbio.sh` -> `compare_motif_mapping_pacbio.sh`. New env
+tools (`hifiasm`, `chopper`) are pinned in `HIV_U3analysis_env.yml`; COMET/
+REGA v3/QGRS Mapper remain web-only and excluded here, same as the Illumina arm.
+
 Once you've reviewed each step's `summary.tsv` + notes and picked a winner,
 that decision gets wired into the production pipelines (steps 8/10/11 of
 the still-current monolithic scripts, currently stubs pending exactly this).

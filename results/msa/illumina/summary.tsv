@@ -1,4 +1,4 @@
 stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
-msa_illumina	mafft	all_subset	12.78		0	1	5/5 seqs retained, 9719.0 columns, 0.0% gap	(see ease_of_use_notes.md)
-msa_illumina	muscle	all_subset	15.03		0	1	5/5 seqs retained, 9719.0 columns, 0.0% gap	(see ease_of_use_notes.md)
-msa_illumina	clustalo	all_subset	115.97		0	1	5/5 seqs retained, 9719.0 columns, 0.0% gap	(see ease_of_use_notes.md)
+msa_illumina	mafft	all_subset	78.71		0	1	5/5 seqs retained, 9719.0 columns, 0.0% gap	(see ease_of_use_notes.md)
+msa_illumina	muscle	all_subset	115.55		0	1	5/5 seqs retained, 9719.0 columns, 0.0% gap	(see ease_of_use_notes.md)
+msa_illumina	clustalo	all_subset	205.24		0	1	5/5 seqs retained, 9719.0 columns, 0.0% gap	(see ease_of_use_notes.md)

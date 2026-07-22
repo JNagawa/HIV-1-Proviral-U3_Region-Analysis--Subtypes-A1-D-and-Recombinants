@@ -1,17 +1,18 @@
 # SHIVER reference alignment -- manual acquisition step
 
-**STATUS (2026-07-21): still outstanding.** This blocks SHIVER in
-`compare_assembly_illumina.sh` (and the production pipeline's step 8/10/11
-if SHIVER is ever wired in there) -- steps 1-3 below need a human to visit
-the LANL form and download the alignment; nothing further here can be
-automated. Everything else in the Illumina comparison harness has been
-fixed/re-run as of this date; this is the one remaining manual blocker.
+**STATUS (2026-07-22): resolved.** The alignment has been downloaded and
+placed at `HIV1_COM_ref_alignment.fasta` (180 sequences, HXB2 + Group M
+subtypes/CRFs). Correction to the earlier note below: this turned out to
+be scriptable after all -- see "How this was actually obtained" for the
+reusable curl recipe (e.g. for pulling a newer year's compendium later).
 
 `shiver_init.sh` requires a curated alignment of existing HIV-1 reference
 sequences (its 3rd positional argument) covering the diversity you might
-find in your samples. This is **not scriptable** from this environment --
-LANL's alignment tool is form-driven with no static download URL -- so this
-is a one-time manual step:
+find in your samples. The original plan below assumed LANL's alignment
+tool required a human in a browser -- it doesn't; its dropdowns are
+populated via a plain AJAX endpoint (`list.comp`) and the form itself
+posts to a plain CGI script (`align.cgi`) that returns a `download.cgi`
+link, all scriptable with curl (no login/session/CAPTCHA involved):
 
 1. Go to the LANL HIV Sequence Database alignment tool:
    `https://www.hiv.lanl.gov/content/sequence/HIV/mainpage.html` -> the
@@ -43,9 +44,39 @@ needed.
   in SHIVER; if the real protocol's primers can't be sourced, an empty/
   minimal primers file is an acceptable fallback.
 
+## How this was actually obtained
+
+The form at `https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html`
+posts (as `multipart/form-data`) to `/cgi-bin/NEWALIGN/align.cgi`. Its
+cascading dropdowns are populated by `list.comp?col=<field>&where=<prior
+selections>` -- queried directly below to confirm valid values instead of
+guessing:
+
+```bash
+BASE="https://www.hiv.lanl.gov/content/sequence/NEWALIGN"
+curl -s "$BASE/list.comp?submit=Retrieve&server=HIV&ebolaIF=&col=al_align_type"
+# -> COM = Compendium
+curl -s "$BASE/list.comp?submit=Retrieve&server=HIV&ebolaIF=&col=al_region&where=al_align_type:COM,al_organism:HIV1"
+# -> GENOME = complete genome
+# GENO_SUB=ALLM ("M group with CRFs") comes from a client-side JS map in
+# align.html (fill_GENO_SUB), not list.comp -- not an AJAX-backed field.
+
+curl -s -X POST "https://www.hiv.lanl.gov/cgi-bin/NEWALIGN/align.cgi" \
+  -F "ORGANISM=HIV" -F "ALIGN_TYPE=COM" -F "SUBORGANISM=HIV1" \
+  -F "PRE_USER=predefined" -F "REGION=GENOME" -F "START=" -F "END=" \
+  -F "GENO_SUB=ALLM" -F "BASETYPE=DNA" -F "YEAR=2021" -F "alignmentID=" \
+  -F "down_acc=1" -F "FORMAT=fasta" -F "submit=Get Alignment" \
+  -o align_response.html
+# response HTML contains a link:
+#   /cgi-bin/common_code/download.cgi?/tmp/NEWALIGN/<session-id>/HIV1_COM_2021_genome_DNA.fasta
+# (session-id is per-request and short-lived -- fetch immediately)
+curl -s "https://www.hiv.lanl.gov/cgi-bin/common_code/download.cgi?/tmp/NEWALIGN/<session-id>/HIV1_COM_2021_genome_DNA.fasta" \
+  -o HIV1_COM_ref_alignment.fasta
+```
+
 ## Download log
 
-(Fill in once you've done step 1-3 above:)
-- Date downloaded:
-- Exact URL / tool page used:
-- Selection filters applied:
+- Date downloaded: 2026-07-22
+- Exact URL / tool page used: `https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html` (via the curl recipe above, not the browser form)
+- Selection filters applied: ALIGN_TYPE=Compendium, SUBORGANISM=HIV-1/SIVcpz, REGION=GENOME (complete genome), GENO_SUB=ALLM (M group with CRFs), BASETYPE=DNA, YEAR=2021, FORMAT=fasta
+- Result: 180 sequences (HXB2 K03455 + 179 Group M subtype/CRF representatives)
