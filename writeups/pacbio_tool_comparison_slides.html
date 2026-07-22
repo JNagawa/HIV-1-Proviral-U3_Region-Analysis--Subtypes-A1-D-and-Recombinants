@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PacBio (HIV-SMRTcap) Tool-Comparison — HIV-1 Proviral U3 Analysis</title>
+<!--
+  HOW TO EDIT: each slide is one <section class="slide">. Edit text directly.
+  Bar lengths = style="--v:NN%". Colours = the :root CSS variables.
+  Present: open in a browser. PDF: Print -> Save as PDF, Landscape, margins None,
+  "Background graphics" on (one slide per page). PPTX version: PacBio_Tool_Comparison.pptx.
+-->
+<style>
+  :root{
+    --accent:#c8603a;--accent-soft:#f4e6df;--ink:#1a1a17;--ink-2:#565550;--muted:#8f8d85;
+    --hair:#e6e4dd;--slide:#ffffff;--plane:#f2f1ec;--s1:#2a78d6;--s2:#eb6834;
+    --good:#0ca30c;--bad:#d03b3b;--track:#f0efe9;--font:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--plane);font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;padding:28px 0}
+  .deck{display:flex;flex-direction:column;align-items:center;gap:26px}
+  .slide{background:var(--slide);width:1180px;height:664px;position:relative;padding:56px 64px 52px;
+         border:1px solid var(--hair);border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  .kicker .dim{color:var(--muted);font-weight:600}
+  h1.title{font-size:30px;font-weight:750;line-height:1.15;letter-spacing:-.01em;margin-bottom:4px}
+  .rule{height:3px;width:56px;background:var(--accent);border-radius:2px;margin:14px 0 22px}
+  .pagenum{position:absolute;right:26px;bottom:18px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .foot{position:absolute;left:64px;bottom:18px;font-size:12px;color:var(--muted)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;height:calc(100% - 108px)}
+  .cols.wide-left{grid-template-columns:1.15fr .85fr}
+  h2.sub{font-size:15px;font-weight:700;color:var(--ink);margin:0 0 10px}
+  ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+  li{font-size:14.5px;line-height:1.45;color:var(--ink-2);padding-left:16px;position:relative}
+  li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  li b{color:var(--ink);font-weight:650} li .why{color:var(--muted);font-style:italic}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .chip{font-size:12.5px;font-weight:600;color:var(--ink);background:var(--accent-soft);border:1px solid #e8d3c8;border-radius:999px;padding:4px 11px}
+  .chip.win{background:#e4f3e4;border-color:#c2e4c2;color:#186b18}
+  .cards{display:flex;flex-direction:column;gap:12px}
+  .card{border:1px solid var(--hair);border-left:3px solid var(--accent);border-radius:5px;padding:11px 14px}
+  .card .p{font-size:13.5px;font-weight:680;color:var(--ink);margin-bottom:3px}
+  .card .r{font-size:13px;line-height:1.4;color:var(--ink-2)} .card .r b{color:#186b18;font-weight:650}
+  .chart{border:1px solid var(--hair);border-radius:6px;padding:16px 18px 14px;background:#fcfcfb}
+  .chart .ct{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:2px}
+  .chart .cs{font-size:11.5px;color:var(--muted);margin-bottom:14px}
+  .row{display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:10px;margin-bottom:9px}
+  .row .lab{font-size:12px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
+  .track{background:var(--track);border-radius:4px;height:16px;overflow:hidden}
+  .bar{height:100%;width:var(--v);border-radius:4px;background:var(--c,var(--s1))}
+  .row .val{font-size:12px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums;min-width:52px}
+  .band-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.35}
+  .finding{background:var(--accent-soft);border:1px solid #e8d3c8;border-radius:6px;padding:11px 14px;margin-top:14px}
+  .finding .fl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:3px}
+  .finding p{font-size:13px;line-height:1.45;color:var(--ink)}
+  .msa-img{width:100%;border:1px solid var(--hair);border-radius:6px;margin-top:4px}
+  .msa-cap{font-size:11px;color:var(--muted);margin-top:6px}
+  .ftab{width:100%;border-collapse:collapse;font-size:13px;margin-top:2px}
+  .ftab th,.ftab td{padding:5px 10px;text-align:right;border-bottom:1px solid var(--hair)}
+  .ftab th:first-child,.ftab td:first-child{text-align:left}
+  .ftab thead th{background:var(--accent-soft);color:var(--ink);font-weight:700;font-size:12px}
+  .ftab td{color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .ftab td:first-child{color:var(--ink);font-weight:600}
+  .tiles{display:flex;flex-direction:column;gap:12px}
+  .tile{border:1px solid var(--hair);border-radius:6px;padding:13px 16px;background:#fcfcfb}
+  .tile .n{font-size:24px;font-weight:750} .tile .n.ok{color:var(--good)} .tile .n.no{color:var(--bad)}
+  .tile .k{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+  .title-slide{display:flex;flex-direction:column;justify-content:center;height:100%}
+  .title-slide .big{font-size:38px;font-weight:780;line-height:1.1;letter-spacing:-.015em;max-width:820px}
+  .title-slide .lede{font-size:16px;color:var(--ink-2);margin-top:16px;max-width:760px;line-height:1.5}
+  .title-slide .meta{font-size:13px;color:var(--muted);margin-top:24px}
+  .steplist{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;max-width:800px}
+  .steplist .chip{background:#f6f5f1;border-color:var(--hair);color:var(--ink-2)}
+  @media print{body{background:#fff;padding:0}.deck{gap:0}
+    .slide{border:none;border-radius:0;box-shadow:none;width:100%;height:100vh;page-break-after:always;break-after:page}
+    @page{size:landscape;margin:0}}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<section class="slide">
+  <div class="title-slide">
+    <div class="kicker">MSc Bioinformatics Internship · Rakai / Makerere</div>
+    <div class="big">PacBio (HIV-SMRTcap) Tool-Comparison Harness</div>
+    <div class="lede">Long-read (PacBio HiFi) arm of the HIV-1 proviral U3 pipeline, run on 4 host-N-masked Rakai
+      SMRTcap samples (124_4, 128_5, 203_3, 211_0). The provirus is recovered from host-masked reads, then
+      assembled, aligned, subtyped, intactness-screened, and scanned for TFBS + G-quadruplex motifs.</div>
+    <div class="steplist">
+      <span class="chip">1 · Proviral Extraction</span>
+      <span class="chip">2 · Assembly</span>
+      <span class="chip">3 · MSA</span>
+      <span class="chip">4 · Biological Filtering</span>
+      <span class="chip">5 · Subtyping</span>
+      <span class="chip">6 · U3 &amp; Motif Mapping</span>
+    </div>
+    <div class="meta">Jovita Nagawa · July 2026 &nbsp;•&nbsp; input: host-N-masked HiFi reads (HIV = ACGT, host = N)</div>
+  </div>
+  <div class="pagenum">1</div>
+</section>
+
+<!-- STEP 1 EXTRACTION -->
+<section class="slide">
+  <div class="kicker">Step 1 <span class="dim">· Proviral Extraction</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols">
+    <div>
+      <div class="chips"><span class="chip win">extract_provirus_strip_hostN (bash / awk / seqkit)</span></div>
+      <h2 class="sub">What was done &amp; why</h2>
+      <ul>
+        <li>SMRTcap reads carry host flanks <b>masked with N</b>; the integrated provirus is the <b>ACGT core</b>.</li>
+        <li><b>Strip the leading &amp; trailing N-runs</b> to recover the proviral core; internal bases preserved <span class="why">so a stray internal N never truncates the genome.</span></li>
+        <li><b>Path A</b> (input already masked); per-read start/end coordinates logged. Custom bash/awk/seqkit — no Python.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Mean recovered core length per sample</div>
+        <div class="cs">bp · reads recovered: 41 / 75 / 19 / 30 (100% of input)</div>
+        <div class="row"><div class="lab">124_4</div><div class="track"><div class="bar" style="--v:56%"></div></div><div class="val">3,370</div></div>
+        <div class="row"><div class="lab">128_5</div><div class="track"><div class="bar" style="--v:100%"></div></div><div class="val">5,964</div></div>
+        <div class="row"><div class="lab">203_3</div><div class="track"><div class="bar" style="--v:30%"></div></div><div class="val">1,789</div></div>
+        <div class="row"><div class="lab">211_0</div><div class="track"><div class="bar" style="--v:73%"></div></div><div class="val">4,378</div></div>
+      </div>
+      <div class="finding"><span class="fl">Finding</span>
+        <p>Provirus recovered from every read (0% residual N). Cores are variable and <b>partial</b> (1.8–6.0 kb, not full 9 kb) — SMRTcap junction reads carry a large host fraction, so downstream assembly must tile them per sample.</p></div>
+    </div>
+  </div>
+  <div class="foot">Proviral Extraction</div><div class="pagenum">2</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 1 <span class="dim">· Proviral Extraction</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card"><div class="p">Uploaded files nested one folder deeper than expected — every sample skipped</div>
+      <div class="r">scp copied the whole raw_smrtcap/ wrapper; the reader looked one level too shallow → no cores → the chain failed downstream. <b>Made the reader search recursively; re-ran and all 4 samples resolved.</b></div></div>
+    <div class="card"><div class="p">Cores are partial provirus (junction reads carry lots of host)</div>
+      <div class="r">203_3 cores average only ~1.8 kb. <b>Flagged for interpretation: reference-guided assembly fills gaps with HXB2, so per-sample U3 coverage is reported, not assumed full.</b></div></div>
+    <div class="card"><div class="p">Filename said "unmasked" though host was masked</div>
+      <div class="r">"hiv.unmasked" = the HIV is the unmasked (ACGT) part, host is N-masked. <b>Verified by content (N-flanks + ACGT core), not the filename, before running.</b></div></div>
+  </div>
+  <div class="foot">Proviral Extraction</div><div class="pagenum">3</div>
+</section>
+
+<!-- STEP 2 ASSEMBLY -->
+<section class="slide">
+  <div class="kicker">Step 2 <span class="dim">· Genome Assembly</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols">
+    <div>
+      <div class="chips"><span class="chip win">minimap2 → HXB2 consensus</span><span class="chip">hifiasm</span></div>
+      <h2 class="sub">What was done &amp; why</h2>
+      <ul>
+        <li><b>Reference-guided</b> (minimap2 map-hifi → HXB2 + bcftools consensus) vs <b>de novo</b> (hifiasm, the HiFi standard).</li>
+        <li>minimap2 preset <b>map-hifi</b>; consensus called with bcftools (haploid).</li>
+        <li>Validity = 8–10 kb full-genome window.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">minimap2 consensus length</div>
+        <div class="cs">bp · valid window 8,000–10,000 · 0% N</div>
+        <div class="row"><div class="lab">124_4</div><div class="track"><div class="bar" style="--v:97%"></div></div><div class="val">9,719</div></div>
+        <div class="row"><div class="lab">128_5</div><div class="track"><div class="bar" style="--v:97%"></div></div><div class="val">9,719</div></div>
+        <div class="row"><div class="lab">203_3</div><div class="track"><div class="bar" style="--v:97%"></div></div><div class="val">9,719</div></div>
+        <div class="row"><div class="lab">211_0</div><div class="track"><div class="bar" style="--v:97%"></div></div><div class="val">9,719</div></div>
+      </div>
+      <div class="finding"><span class="fl">Finding</span>
+        <p>Full-length consensus for all 4 samples — but because the cores are partial, uncovered positions are <b>filled from HXB2</b>, so a "valid" length here is partly reference-derived. Per-sample U3 read depth is the honest metric. hifiasm comparison pending its install.</p></div>
+    </div>
+  </div>
+  <div class="foot">Assembly</div><div class="pagenum">4</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 2 <span class="dim">· Genome Assembly</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card"><div class="p">hifiasm (de novo comparator) not yet installed on the node</div>
+      <div class="r">The assembly step auto-skips hifiasm rather than failing. <b>hifiasm is pinned in the env file and installs in the pending env-setup; its comparison row is added on re-run — no rework of the minimap2 side.</b></div></div>
+    <div class="card"><div class="p">Reference-guided consensus masks missing coverage</div>
+      <div class="r">bcftools consensus returns HXB2-length output, filling gaps with reference bases where partial reads don't reach. <b>Reported as a caveat; U3-region read depth is checked per sample so reference-fill isn't mistaken for real signal.</b></div></div>
+  </div>
+  <div class="foot">Assembly</div><div class="pagenum">5</div>
+</section>
+
+<!-- STEP 3 MSA -->
+<section class="slide">
+  <div class="kicker">Step 3 <span class="dim">· Multiple Sequence Alignment</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols wide-left">
+    <div>
+      <div class="chips"><span class="chip win">MAFFT (L-INS-i)</span><span class="chip">MUSCLE</span><span class="chip">Clustal Omega</span></div>
+      <h2 class="sub">What was done &amp; why</h2>
+      <ul>
+        <li>Aligned HXB2 + the 4 sample consensus with each tool <span class="why">(reuses the Illumina arm's run scripts — alignment is platform-agnostic).</span></li>
+        <li>MAFFT as <b>L-INS-i</b> (<code>--localpair --maxiterate 1000</code>).</li>
+        <li>All three retained <b>5/5</b>; MAFFT fastest (78 s vs 119 s MUSCLE, 201 s Clustal Ω).</li>
+      </ul>
+    </div>
+    <div>
+      <img class="msa-img" src="figures/msa_u3_pacbio_snapshot.png" alt="PacBio U3 MSA snapshot">
+      <div class="msa-cap">Coloured U3 alignment (MAFFT L-INS-i): HXB2 + 4 PacBio consensus, 453 columns; top band = per-column conservation (grey dips = sample variation).</div>
+      <div class="finding"><span class="fl">Finding</span>
+        <p>MAFFT L-INS-i is the pick — most accurate for divergent HIV and fastest here. Unlike the Illumina U3, the PacBio consensus set shows real inter-sample variation where reads covered.</p></div>
+    </div>
+  </div>
+  <div class="foot">Multiple Sequence Alignment</div><div class="pagenum">6</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 3 <span class="dim">· Multiple Sequence Alignment</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card"><div class="p">Inherited the Illumina-arm alignment fixes (no new breakage)</div>
+      <div class="r">Reused run_mafft/muscle/clustalo unchanged. <b>MUSCLE stays pinned to 3.8 (v5 SIGILL on this CPU); U3 output is uppercased so motif scanners don't read MAFFT's lowercase as masked.</b></div></div>
+    <div class="card"><div class="p">Consensus set is partly reference-filled</div>
+      <div class="r">Reference-fill makes the consensus more similar to HXB2 than truly divergent reads would be. <b>Noted: the alignment is trustworthy for coordinates, but inter-sample divergence is understated until fuller-coverage reads are used.</b></div></div>
+  </div>
+  <div class="foot">Multiple Sequence Alignment</div><div class="pagenum">7</div>
+</section>
+
+<!-- STEP 4 BIOFILT -->
+<section class="slide">
+  <div class="kicker">Step 4 <span class="dim">· Biological Filtering &amp; Intactness</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols">
+    <div>
+      <div class="chips"><span class="chip">Poplars (Hypermut 3)</span><span class="chip">HIVSeqinR</span><span class="chip">HIVIntact</span></div>
+      <h2 class="sub">What was done &amp; why</h2>
+      <ul>
+        <li><b>Two-stage filter</b>: Poplars screens APOBEC G→A hypermutation, then structural intactness via HIVSeqinR / HIVIntact.</li>
+        <li>Input <b>HXB2-first</b> (Poplars' implicit reference); HIVIntact <code>--subtype A1</code>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="tiles">
+        <div class="tile"><div class="n ok">ran</div><div class="k"><b>Poplars</b> — hypermutation screen completed</div></div>
+        <div class="tile"><div class="n">0 / 5</div><div class="k"><b>HIVIntact</b> — 0 intact, 5 non-intact (subtype-B-biased: cautious on A1/D)</div></div>
+        <div class="tile"><div class="n no">config</div><div class="k"><b>HIVSeqinR</b> — Rakai standard; needs primer config (pending)</div></div>
+      </div>
+      <div class="finding"><span class="fl">Finding</span>
+        <p>The two-stage filter is viable. HIVSeqinR (Rakai A1/D-validated) is the primary caller once its one-time primer config is supplied; HIVIntact is a fast cross-check but subtype-B-biased, so read its A1/D calls with caution.</p></div>
+    </div>
+  </div>
+  <div class="foot">Biological Filtering</div><div class="pagenum">8</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 4 <span class="dim">· Biological Filtering &amp; Intactness</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card"><div class="p">HIVSeqinR needs a manual protocol-specific primer configuration</div>
+      <div class="r">It refuses to run until 2nd-round PCR primers are supplied and .CONFIGURED is set. <b>Documented the exact step; HIVIntact + Poplars give interim intactness/hypermutation signal meanwhile.</b></div></div>
+    <div class="card"><div class="p">HIVIntact heuristics are subtype-B optimised — bias risk on A1/D</div>
+      <div class="r">Its calls can be skewed for this cohort. <b>Flagged interpret-with-caution; HIVSeqinR is the A1/D-validated primary once configured.</b></div></div>
+  </div>
+  <div class="foot">Biological Filtering</div><div class="pagenum">9</div>
+</section>
+
+<!-- STEP 5 SUBTYPING -->
+<section class="slide">
+  <div class="kicker">Step 5 <span class="dim">· Subtype &amp; Recombination Detection</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols wide-left">
+    <div>
+      <div class="chips"><span class="chip win">jpHMM</span><span class="chip">IQ-TREE 2</span></div>
+      <h2 class="sub">What was done &amp; why</h2>
+      <ul>
+        <li><b>jpHMM</b> calls per-sample recombination breakpoints; <b>IQ-TREE 2</b> confirms clustering (ML tree, <code>-m MFP</code>).</li>
+        <li><b>This is where each Rakai sample's A1 / D / recombinant subtype is actually determined</b> <span class="why">(it is not in any metadata).</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Runtime per tool</div>
+        <div class="cs">jpHMM runs per sample (~10 min each); IQ-TREE builds one tree</div>
+        <div class="row"><div class="lab">jpHMM</div><div class="track"><div class="bar" style="--v:100%;--c:var(--s1)"></div></div><div class="val">~636 s</div></div>
+        <div class="row"><div class="lab">IQ-TREE 2</div><div class="track"><div class="bar" style="--v:1%;--c:var(--s2)"></div></div><div class="val">2 s</div></div>
+        <div class="band-note">jpHMM produced per-sample recombination/breakpoint maps for all 4 samples; IQ-TREE confirmed the clustering.</div>
+      </div>
+      <div class="finding"><span class="fl">Finding</span>
+        <p>jpHMM + IQ-TREE 2 works well; jpHMM dominates runtime (~10 min/sample ×4) vs the ML tree's ~2 s — the step to parallelise at cohort scale.</p></div>
+    </div>
+  </div>
+  <div class="foot">Subtyping</div><div class="pagenum">10</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 5 <span class="dim">· Subtype &amp; Recombination Detection</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card"><div class="p">Reused the Illumina-arm subtyping fixes</div>
+      <div class="r">jpHMM's LD_LIBRARY_PATH/GLIBCXX conflict and the iqtree2-vs-iqtree3 binary pin were already resolved and carried over. <b>Ran cleanly on the PacBio consensus with no new issues.</b></div></div>
+    <div class="card"><div class="p">Ultrafast bootstrap still off for the small subset</div>
+      <div class="r">IQ-TREE refuses UFBoot with too few distinct sequences. <b>-B 1000 stays disabled for the 4-sample subset; re-enabled for the full-cohort tree.</b></div></div>
+  </div>
+  <div class="foot">Subtyping</div><div class="pagenum">11</div>
+</section>
+
+<!-- STEP 6 MOTIF -->
+<section class="slide">
+  <div class="kicker">Step 6 <span class="dim">· U3 Extraction &amp; Motif Mapping</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols">
+    <div>
+      <div class="chips"><span class="chip">SeqKit (U3)</span><span class="chip">FIMO</span><span class="chip">MOODS</span><span class="chip">TFBSTools</span><span class="chip">gquad</span><span class="chip">pqsfinder</span></div>
+      <h2 class="sub">What was done &amp; why</h2>
+      <ul>
+        <li>Extracted <b>U3 (453 bp, 5 seqs)</b> from the MAFFT alignment, HXB2-anchored.</li>
+        <li><b>TFBS</b> (FIMO / MOODS / TFBSTools) scan <b>JASPAR 2024 PWMs</b> for 6 TFs; FIMO threshold 1e-4.</li>
+        <li><b>G-quadruplex</b> — <b>gquad</b>: regex on G-tract runs &amp; loop lengths; <b>pqsfinder</b>: exhaustive, imperfection-tolerant search. Both scan raw U3 — <b>no PWM</b>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Motifs identified per factor</div>
+        <div class="cs">subset (4-sample U3 set) · JASPAR 2024 PWMs</div>
+        <table class="ftab">
+          <thead><tr><th>Transcription factor</th><th>FIMO</th><th>TFBSTools</th></tr></thead>
+          <tbody>
+            <tr><td>NF-κB p65 (RELA)</td><td>9</td><td>19</td></tr>
+            <tr><td>NF-κB p50 (NFKB1)</td><td>2</td><td>2</td></tr>
+            <tr><td>SP1</td><td>5</td><td>15</td></tr>
+            <tr><td>NFAT</td><td>0</td><td>14</td></tr>
+            <tr><td>AP-1 (FOS::JUN)</td><td>0</td><td>6</td></tr>
+            <tr><td>TBP</td><td>0</td><td>31</td></tr>
+          </tbody>
+        </table>
+        <table class="ftab" style="margin-top:8px">
+          <thead><tr><th>G-quadruplex</th><th>control</th><th>subset</th></tr></thead>
+          <tbody><tr><td>gquad</td><td>3</td><td>15</td></tr><tr><td>pqsfinder</td><td>1</td><td>5</td></tr></tbody>
+        </table>
+        <div class="finding"><span class="fl">Finding</span>
+          <p>TFBSTools recovered all 6 target TFs; FIMO's strict 1e-4 kept the highest-confidence (p65, SP1, p50). G4: gquad 15 / pqsfinder 5 putative sites — consistent G-quadruplex potential in the U3. All passed the HXB2 control.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">U3 Extraction &amp; Motif Mapping</div><div class="pagenum">12</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 6 <span class="dim">· U3 Extraction &amp; Motif Mapping</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card"><div class="p">Inherited the Illumina-arm motif fixes</div>
+      <div class="r">The stderr-swallowing logging bug, REPO_ROOT path fix, lowercase→uppercase U3, and JASPAR-via-REST sourcing were already fixed and reused. <b>PacBio motif scan ran clean and passed the HXB2 positive control for every tool.</b></div></div>
+    <div class="card"><div class="p">Reference-filled consensus can inflate apparent conservation of motif sites</div>
+      <div class="r">U3 motifs partly reflect HXB2 where reads didn't cover. <b>Per-factor counts are reported as tool-comparison signal; biological calls await fuller-coverage reads / the full cohort.</b></div></div>
+  </div>
+  <div class="foot">U3 Extraction &amp; Motif Mapping</div><div class="pagenum">13</div>
+</section>
+
+</div>
+</body>
+</html>
