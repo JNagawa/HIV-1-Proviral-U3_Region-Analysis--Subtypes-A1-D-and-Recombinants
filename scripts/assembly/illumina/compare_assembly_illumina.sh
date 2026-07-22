@@ -207,7 +207,7 @@ for SRR in $(subset_accessions illumina "${REPO_ROOT}/scripts/common/subset_samp
         continue
     fi
 
-    for TOOL in bwa_consensus spades shiver; do
+    for TOOL in ${ASSEMBLY_TOOLS:-bwa_consensus spades shiver}; do
         OUTDIR="${RESULTS_DIR}/${TOOL}_out"
         TIMELOG="${RESULTS_DIR}/${TOOL}_${SRR}.time"
         LOG="${RESULTS_DIR}/${TOOL}_${SRR}.log"

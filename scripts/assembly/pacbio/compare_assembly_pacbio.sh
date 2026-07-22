@@ -81,7 +81,7 @@ for SRR in $(subset_accessions pacbio "${REPO_ROOT}/scripts/common/subset_sample
         continue
     fi
 
-    for TOOL in minimap2_consensus hifiasm; do
+    for TOOL in ${ASSEMBLY_TOOLS:-minimap2_consensus hifiasm}; do
         if [ "${TOOL}" = "hifiasm" ] && ! command -v hifiasm >/dev/null 2>&1; then
             echo "NOTE: hifiasm not installed, skipping (see HIV_U3analysis_env.yml)." >&2
             continue
