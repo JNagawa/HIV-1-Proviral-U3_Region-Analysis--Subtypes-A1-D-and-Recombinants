@@ -15,17 +15,17 @@ source "${REPO_ROOT}/scripts/common/lib_compare.sh"
 RAW_DIR="${REPO_ROOT}/data/raw/illumina"
 RESULTS_DIR="${REPO_ROOT}/results/download_qc/illumina"
 SUMMARY_TSV="${RESULTS_DIR}/summary.tsv"
+KRAKEN2_DB="${REPO_ROOT}/data/reference/kraken2_standard_16gb_db"
 mkdir -p "${RESULTS_DIR}"
 [ -f "${RESULTS_DIR}/ease_of_use_notes.md" ] || cp "${REPO_ROOT}/scripts/common/ease_of_use_template.md" "${RESULTS_DIR}/ease_of_use_notes.md"
 
 # Phred quality score Q is defined as Q = -10*log10(P_error) (Ewing & Green
-# 1998) -- Q20 corresponds to a 1-in-100 (99%) per-base call accuracy, Q30
-# to 1-in-1000 (99.9%). Q20 is used below (sliding-window trim AND
-# whole-read average) as the "high-confidence" bar: this pipeline feeds a
-# single consensus sequence per sample into subtype calls and TFBS
-# motif-mapping in the U3 region, where a handful of miscalled bases can
-# flip a motif match -- so both trimmers are held to Q20 rather than
-# Trimmomatic's own textbook example (SLIDINGWINDOW:4:15, i.e. Q15/~97%).
+# 1998) -- Q15 corresponds to a 1-in-32 (~97%) per-base call accuracy, Q20
+# to 1-in-100 (99%). Q15 is used below (sliding-window trim AND whole-read
+# average) as the quality bar, matching Trimmomatic's own textbook
+# SLIDINGWINDOW:4:15 example -- both trimmers are held to the same
+# threshold so the comparison reflects the algorithms, not mismatched
+# settings.
 
 # LEADING/TRAILING:3 -- Trimmomatic's own manual example value: cut a base
 # from the very start/end of a read the moment its quality drops below Q3.
@@ -34,24 +34,24 @@ mkdir -p "${RESULTS_DIR}"
 # quality bar is enforced by SLIDINGWINDOW and AVGQUAL below, not this.
 TRIM_LEADING=3
 TRIM_TRAILING=3
-# SLIDINGWINDOW:4:20 -- slide a 4-base window along the read; once the
-# window's mean quality falls below Q20 (99% accuracy), trim from there to
-# the read's end. 4bp is Trimmomatic's own recommended window size; Q20
-# (rather than the manual example's Q15) is our deliberately stricter choice.
+# SLIDINGWINDOW:4:15 -- slide a 4-base window along the read; once the
+# window's mean quality falls below Q15 (~97% accuracy), trim from there to
+# the read's end. 4bp is Trimmomatic's own recommended window size; Q15 is
+# Trimmomatic's own manual example threshold.
 # fastp's --cut_right/--cut_right_window_size/--cut_right_mean_quality below
 # reproduce this exact same window+threshold for a fair comparison.
-TRIM_SLIDINGWINDOW="4:20"
+TRIM_SLIDINGWINDOW="4:15"
 # MINLEN:50 -- discard a read/pair if trimming leaves it under 50bp. Reads
 # are 251bp to start, and the reference (HXB2, K03455.1) is only ~9.7kb, so
 # very short leftover fragments map ambiguously (multi-mapping) with
 # BWA-MEM; 50bp keeps enough sequence for confident, unique placement while
 # still retaining reads that only lost their tail to quality trimming.
 TRIM_MINLEN=50
-# AVGQUAL:20 -- independent of the sliding window, also require the read's
-# OVERALL average quality to be >=Q20 after trimming. A read can pass a 4bp
+# AVGQUAL:15 -- independent of the sliding window, also require the read's
+# OVERALL average quality to be >=Q15 after trimming. A read can pass a 4bp
 # sliding window check while still being poor quality on average; this is
 # the final whole-read quality gate applied to both trimmers.
-TRIM_AVGQUAL=20
+TRIM_AVGQUAL=15
 
 ADAPTER_FILE=$(compgen -G "${CONDA_PREFIX}/share/trimmomatic*/adapters/TruSeq3-PE-2.fa" | head -1)
 THREADS="${THREADS:-4}"
@@ -94,6 +94,7 @@ for SRR in $(subset_accessions illumina "${REPO_ROOT}/scripts/common/subset_samp
                     --cut_right --cut_right_window_size 4 --cut_right_mean_quality "${TRIM_AVGQUAL}" \
                     --average_qual "${TRIM_AVGQUAL}" \
                     --length_required "${TRIM_MINLEN}" \
+                    --dedup \
                     --json "${OUTDIR}/${SRR}_fastp.json" --html "${OUTDIR}/${SRR}_fastp.html" \
                     --thread "${THREADS}" \
                 > "${LOG}" 2>&1
@@ -149,6 +150,44 @@ for SRR in $(subset_accessions illumina "${REPO_ROOT}/scripts/common/subset_samp
         fi
 
         append_summary_row "download_qc_illumina" "${TOOL}" "${SRR}" "${WALLCLOCK_SEC}" "${PEAK_RSS_MB}" "${EXIT_CODE}" "${VALID}" "${METRIC}"
+
+        # --- Deduplication + Kraken2 host/bacterial contamination filtering,
+        # applied downstream of whichever trimmer just ran (fastp's own
+        # --dedup above already deduplicates; Trimmomatic has no native
+        # dedup capability, so a fastp dedup-only pass runs first for that
+        # arm). This mirrors the review's fastp -> Kraken2 -> SHIVER chain
+        # for both trimmer arms, so the comparison stays fair. ---
+        if [ "${VALID}" -eq 1 ]; then
+            DEDUP_R1="${R1_OUT}" DEDUP_R2="${R2_OUT}"
+            if [ "${TOOL}" = "trimmomatic" ]; then
+                DEDUP_R1="${OUTDIR}/${SRR}_1.dedup.fastq.gz"
+                DEDUP_R2="${OUTDIR}/${SRR}_2.dedup.fastq.gz"
+                bash "${REPO_ROOT}/scripts/utils/fastp_dedup.sh" \
+                    "${R1_OUT}" "${R2_OUT}" "${DEDUP_R1}" "${DEDUP_R2}" \
+                    "${OUTDIR}/${SRR}_dedup_fastp" \
+                    > "${RESULTS_DIR}/dedup_${TOOL}_${SRR}.log" 2>&1
+            fi
+
+            KRAKEN_OUTDIR="${RESULTS_DIR}/kraken2_${TOOL}_out"
+            KRAKEN_TIMELOG="${RESULTS_DIR}/kraken2_${TOOL}_${SRR}.time"
+            measure_and_run "${KRAKEN_TIMELOG}" -- \
+                bash "${REPO_ROOT}/scripts/utils/kraken2_filter_reads.sh" \
+                    "${DEDUP_R1}" "${DEDUP_R2}" "${KRAKEN_OUTDIR}" "${SRR}" "${KRAKEN2_DB}" \
+                > "${RESULTS_DIR}/kraken2_${TOOL}_${SRR}.log" 2>&1
+            KRAKEN_EXIT=$?
+            parse_time_metrics "${KRAKEN_TIMELOG}"
+
+            KRAKEN_VALID=0
+            KRAKEN_METRIC="n/a"
+            KRAKEN_R1_OUT="${KRAKEN_OUTDIR}/${SRR}_1.kraken_filtered.fastq.gz"
+            KRAKEN_R2_OUT="${KRAKEN_OUTDIR}/${SRR}_2.kraken_filtered.fastq.gz"
+            if [ -s "${KRAKEN_R1_OUT}" ] && [ -s "${KRAKEN_R2_OUT}" ]; then
+                KRAKEN_VALID=1
+                KRAKEN_METRIC=$(grep -o '^Kraken2 filtering.*retained[^.]*' "${RESULTS_DIR}/kraken2_${TOOL}_${SRR}.log" | tail -1)
+                [ -z "${KRAKEN_METRIC}" ] && KRAKEN_METRIC="filtered, see ${KRAKEN_OUTDIR}/${SRR}.kreport"
+            fi
+            append_summary_row "download_qc_illumina" "kraken2_after_${TOOL}" "${SRR}" "${WALLCLOCK_SEC}" "${PEAK_RSS_MB}" "${KRAKEN_EXIT}" "${KRAKEN_VALID}" "${KRAKEN_METRIC}"
+        fi
     done
 done
 

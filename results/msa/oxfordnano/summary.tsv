@@ -1,0 +1,4 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+msa_oxfordnano	mafft	all_subset	0.00		127	0	n/a	(see ease_of_use_notes.md)
+msa_oxfordnano	muscle	all_subset	0.00		127	0	n/a	(see ease_of_use_notes.md)
+msa_oxfordnano	clustalo	all_subset	0.00		127	0	n/a	(see ease_of_use_notes.md)

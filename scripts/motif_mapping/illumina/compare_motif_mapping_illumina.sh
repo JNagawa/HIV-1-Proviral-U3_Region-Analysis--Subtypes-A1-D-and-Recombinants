@@ -1,12 +1,18 @@
 #!/bin/bash
 # Compares FIMO vs MOODS vs TFBSTools -- PWM motif scanning for the 6 core
-# JASPAR TFs (see setup_jaspar.sh) against U3 sequences extracted from
-# the msa stage's alignment via scripts/utils/extract_u3_by_hxb2_anchor.sh.
+# JASPAR TFs (see setup_jaspar.sh) -- and separately gquad vs pqsfinder --
+# G-quadruplex prediction, which doesn't use JASPAR PWMs at all, just the
+# raw sequence -- against U3 sequences extracted from the msa stage's
+# alignment via scripts/utils/extract_u3_by_hxb2_anchor.sh.
 #
 # Per the README, each tool runs a positive control first: scanning HXB2's
-# own U3 alone, where the target motifs are known/expected to be present.
-# A tool that finds zero hits on its own positive control is flagged before
-# its subset numbers are trusted.
+# own U3 alone. For the TFBS tools this is a real positive control (JASPAR
+# motifs are known/expected to be present); for gquad/pqsfinder it's a
+# weaker sanity check (no literature-confirmed G4 site in HXB2's U3 is
+# cited anywhere in this repo) -- both G4 tools finding zero hits there
+# isn't itself damning the way it would be for the TFBS tools, but a
+# non-zero, non-implausible result is still worth confirming before
+# trusting the subset numbers.
 # Usage: ./compare_motif_mapping_illumina.sh
 set -uo pipefail
 
@@ -71,6 +77,18 @@ run_tool() {
             n_hits=0
             [ -s "${out}" ] && n_hits=$(grep -vc "^#" "${out}" 2>/dev/null || echo 0)
             ;;
+        gquad)
+            measure_and_run "${timelog}" -- "${STAGE_DIR}/run_gquad.sh" "${input}" "${out}" > "${log}" 2>&1
+            exit_code=$?
+            n_hits=0
+            [ -s "${out}" ] && n_hits=$(grep -vc "^#" "${out}" 2>/dev/null || echo 0)
+            ;;
+        pqsfinder)
+            measure_and_run "${timelog}" -- "${STAGE_DIR}/run_pqsfinder.sh" "${input}" "${out}" > "${log}" 2>&1
+            exit_code=$?
+            n_hits=0
+            [ -s "${out}" ] && n_hits=$(grep -vc "^#" "${out}" 2>/dev/null || echo 0)
+            ;;
     esac
 
     parse_time_metrics "${timelog}"
@@ -83,16 +101,25 @@ run_tool() {
     append_summary_row "motif_mapping_illumina" "${tool}" "${sample}" "${WALLCLOCK_SEC}" "${PEAK_RSS_MB}" "${exit_code}" "${valid}" "${metric}"
 
     if [ "${sample}" = "positive_control" ] && [ "${valid}" -eq 0 ]; then
-        echo "WARNING: ${tool} found zero motif hits on HXB2's own U3 (positive control failed) -- treat its subset numbers as suspect until this is investigated." >&2
+        case "${tool}" in
+            gquad|pqsfinder)
+                echo "NOTE: ${tool} found zero G-quadruplex predictions on HXB2's own U3 -- unlike the TFBS tools, there's no literature-confirmed G4 site here to treat as a strict positive control, but worth a manual look if this seems implausible." >&2
+                ;;
+            *)
+                echo "WARNING: ${tool} found zero motif hits on HXB2's own U3 (positive control failed) -- treat its subset numbers as suspect until this is investigated." >&2
+                ;;
+        esac
     fi
 }
 
-for TOOL in fimo moods tfbstools; do
+for TOOL in fimo moods tfbstools gquad pqsfinder; do
     echo "=== ${TOOL}: positive control (HXB2 own U3) ==="
     case "${TOOL}" in
         fimo) PC_OUT="${RESULTS_DIR}/fimo_positive_control_out" ;;
         moods) PC_OUT="${RESULTS_DIR}/moods_positive_control.tsv" ;;
         tfbstools) PC_OUT="${RESULTS_DIR}/tfbstools_positive_control.gff3" ;;
+        gquad) PC_OUT="${RESULTS_DIR}/gquad_positive_control.gff3" ;;
+        pqsfinder) PC_OUT="${RESULTS_DIR}/pqsfinder_positive_control.gff3" ;;
     esac
     run_tool "${TOOL}" "positive_control" "${HXB2_U3_ONLY}" "${PC_OUT}"
 
@@ -101,6 +128,8 @@ for TOOL in fimo moods tfbstools; do
         fimo) OUT="${RESULTS_DIR}/fimo_out" ;;
         moods) OUT="${RESULTS_DIR}/moods_out.tsv" ;;
         tfbstools) OUT="${RESULTS_DIR}/tfbstools_out.gff3" ;;
+        gquad) OUT="${RESULTS_DIR}/gquad_out.gff3" ;;
+        pqsfinder) OUT="${RESULTS_DIR}/pqsfinder_out.gff3" ;;
     esac
     run_tool "${TOOL}" "all_subset" "${U3_FASTA}" "${OUT}"
 done

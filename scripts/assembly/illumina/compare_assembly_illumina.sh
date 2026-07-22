@@ -187,9 +187,16 @@ run_shiver() {
 }
 export -f run_shiver
 
+KRAKEN2_FASTP_DIR="${REPO_ROOT}/results/download_qc/illumina/kraken2_fastp_out"
+
 for SRR in $(subset_accessions illumina "${REPO_ROOT}/scripts/common/subset_samples.tsv"); do
-    R1="${FASTP_DIR}/${SRR}_1.trimmed.fastq.gz"
-    R2="${FASTP_DIR}/${SRR}_2.trimmed.fastq.gz"
+    R1="${KRAKEN2_FASTP_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
+    R2="${KRAKEN2_FASTP_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ]; then
+        echo "NOTE: no Kraken2-filtered reads for ${SRR}, falling back to plain fastp-trimmed reads (no contamination filtering)." >&2
+        R1="${FASTP_DIR}/${SRR}_1.trimmed.fastq.gz"
+        R2="${FASTP_DIR}/${SRR}_2.trimmed.fastq.gz"
+    fi
     if [ ! -s "${R1}" ] || [ ! -s "${R2}" ]; then
         echo "NOTE: no fastp-trimmed reads for ${SRR}, run scripts/download_qc/illumina/download_qc_illumina.sh first for the intended input. Falling back to raw reads." >&2
         R1="${RAW_DIR}/${SRR}_1.fastq.gz"

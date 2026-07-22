@@ -1,0 +1,4 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+assembly_oxfordnano	minimap2	SRR16005717	80.73		0	1	9719bp, 0.00% N	(see ease_of_use_notes.md)
+assembly_oxfordnano	minimap2	SRR16005712	325.71		0	1	9719bp, 0.00% N	(see ease_of_use_notes.md)
+assembly_oxfordnano	minimap2	SRR16005715	218.30		0	1	9719bp, 0.00% N	(see ease_of_use_notes.md)

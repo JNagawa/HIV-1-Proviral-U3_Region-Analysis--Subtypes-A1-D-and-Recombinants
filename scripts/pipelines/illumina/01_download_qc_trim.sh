@@ -35,14 +35,10 @@ set -o pipefail
 ##
 ## QUALITY-THRESHOLD RATIONALE (see also the CONFIGURATION section below):
 ## Phred quality score Q is defined as Q = -10*log10(P_error) (Ewing & Green
-## 1998) -- Q20 corresponds to a 1-in-100 (99%) per-base call accuracy, Q30
-## to 1-in-1000 (99.9%). Q20 is used throughout below (sliding-window trim
-## AND whole-read average) as the "high-confidence" bar: this pipeline feeds
-## a single consensus sequence per sample into subtype calls and TFBS
-## motif-mapping in the U3 region, where a handful of miscalled bases can
-## flip a motif match -- so we trim harder than Trimmomatic's own textbook
-## example (which uses SLIDINGWINDOW:4:15, i.e. Q15/~97%) rather than
-## accepting the more permissive default.
+## 1998) -- Q15 corresponds to a 1-in-32 (~97%) per-base call accuracy, Q20
+## to 1-in-100 (99%). Q15 is used throughout below (sliding-window trim AND
+## whole-read average), matching Trimmomatic's own textbook
+## SLIDINGWINDOW:4:15 example.
 ##
 ## NOTE: Ensure this script is executed on a system with Anaconda, Miniconda or
 ## an equivalent Python distribution. Create an environment using the provided
@@ -116,22 +112,22 @@ SRR_ACCESSIONS=(
 # quality bar is enforced by SLIDINGWINDOW and AVGQUAL below, not this.
 TRIM_LEADING=3
 TRIM_TRAILING=3
-# SLIDINGWINDOW:4:20 -- slide a 4-base window along the read; once the
-# window's mean quality falls below Q20 (99% accuracy), trim from there to
-# the read's end. 4bp is Trimmomatic's own recommended window size; Q20
-# (rather than the manual example's Q15) is our deliberately stricter choice.
-TRIM_SLIDINGWINDOW="4:20"
+# SLIDINGWINDOW:4:15 -- slide a 4-base window along the read; once the
+# window's mean quality falls below Q15 (~97% accuracy), trim from there to
+# the read's end. 4bp is Trimmomatic's own recommended window size; Q15 is
+# Trimmomatic's own manual example threshold.
+TRIM_SLIDINGWINDOW="4:15"
 # MINLEN:50 -- discard a read/pair if trimming leaves it under 50bp. Reads
 # are 251bp to start, and the reference (HXB2, K03455.1) is only ~9.7kb, so
 # very short leftover fragments map ambiguously (multi-mapping) with
 # BWA-MEM; 50bp keeps enough sequence for confident, unique placement while
 # still retaining reads that only lost their tail to quality trimming.
 TRIM_MINLEN=50
-# AVGQUAL:20 -- independent of the sliding window, also require the read's
-# OVERALL average quality to be >=Q20 after trimming. A read can pass a
+# AVGQUAL:15 -- independent of the sliding window, also require the read's
+# OVERALL average quality to be >=Q15 after trimming. A read can pass a
 # 4bp sliding window check while still being poor quality on average; this
 # is the final whole-read quality gate.
-TRIM_AVGQUAL=20
+TRIM_AVGQUAL=15
 
 # Directory structure (matches scripts/pipelines/illumina_u3analysis.sh for
 # everything except the trimmed-reads directories, so this step's output is
@@ -144,6 +140,10 @@ FASTQC_POST_DIR="${QC_DIR}/fastqc_post"                            # FastQC on T
 MULTIQC_DIR="${QC_DIR}/multiqc"                                    # the two aggregated MultiQC reports
 TRIMMED_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/trimmed_trimmomatic"  # Trimmomatic's trimmed reads
 TRIMMED_FASTP_DIR="${BASE_DIR}/data/processed/illumina/trimmed_fastp"              # fastp's trimmed reads
+DEDUP_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/dedup_trimmomatic"      # fastp --dedup-only pass on Trimmomatic's output
+KRAKEN2_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/kraken2_trimmomatic"  # Kraken2-filtered, Trimmomatic track
+KRAKEN2_FASTP_DIR="${BASE_DIR}/data/processed/illumina/kraken2_fastp"              # Kraken2-filtered, fastp track (production input to assembly)
+KRAKEN2_DB="${BASE_DIR}/data/reference/kraken2_standard_16gb_db"                   # size-capped Standard DB (human+bacteria+archaea+viral)
 LOG_DIR="${BASE_DIR}/logs"                                         # per-sample tool logs (shared across all steps)
 CHECKPOINT_DIR="${BASE_DIR}/checkpoints"                           # resume-state markers (shared across all steps)
 
@@ -227,7 +227,9 @@ log_msg "All required tools found."
 # directories that already exist, so this is always safe to re-run.
 
 mkdir -p "${RAW_DIR}" "${FASTQC_PRE_DIR}" "${FASTQC_POST_DIR}" "${MULTIQC_DIR}" \
-         "${TRIMMED_TRIMMOMATIC_DIR}" "${TRIMMED_FASTP_DIR}" "${LOG_DIR}" "${CHECKPOINT_DIR}"
+         "${TRIMMED_TRIMMOMATIC_DIR}" "${TRIMMED_FASTP_DIR}" \
+         "${DEDUP_TRIMMOMATIC_DIR}" "${KRAKEN2_TRIMMOMATIC_DIR}" "${KRAKEN2_FASTP_DIR}" \
+         "${LOG_DIR}" "${CHECKPOINT_DIR}"
 
 log_msg "Directory structure ready under: ${BASE_DIR}"
 
@@ -451,6 +453,7 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
         --cut_right --cut_right_window_size 4 --cut_right_mean_quality "${TRIM_AVGQUAL}" \
         --average_qual "${TRIM_AVGQUAL}" \
         --length_required "${TRIM_MINLEN}" \
+        --dedup \
         --json "${JSON_OUT}" --html "${HTML_OUT}" \
         --thread "${THREADS}" \
         2>&1 | tee "${LOG_DIR}/${SRR}_fastp.log"
@@ -458,11 +461,14 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
     # Notes on the flags above:
     #   --cut_right ... : fastp's equivalent of Trimmomatic's SLIDINGWINDOW
     #     -- slides a 4bp window from 5' to 3' and trims from the first
-    #     window whose mean quality drops below Q20 onward. Off by default
+    #     window whose mean quality drops below Q15 onward. Off by default
     #     in fastp, so must be explicitly enabled for parity.
-    #   --average_qual  : same whole-read Q20 average-quality gate as
+    #   --average_qual  : same whole-read Q15 average-quality gate as
     #     Trimmomatic's AVGQUAL.
     #   --length_required : same MINLEN:50 floor as Trimmomatic.
+    #   --dedup : PCR/optical duplicate removal, off by default in fastp.
+    #     Trimmomatic has no native dedup capability, so its own track gets
+    #     a separate fastp dedup-only pass later in this script instead.
     #   Adapter trimming is fastp's default behavior (auto-detected from
     #   read overlap for paired-end data) -- no flag needed to enable it,
     #   unlike Trimmomatic which needs an explicit ILLUMINACLIP + adapter
@@ -543,6 +549,81 @@ check_exit "MultiQC (fastp) failed"
 log_msg "MultiQC report generated: ${MULTIQC_DIR}/fastp_report.html"
 
 ##==========================================================================##
+##      1h: DEDUPLICATION + KRAKEN2 HOST/BACTERIAL CONTAMINATION FILTER      ##
+##==========================================================================##
+# Per the tools review's recommended chain (fastp -> Kraken2 -> SHIVER):
+# fastp's own --dedup above already deduplicates its track; Trimmomatic has
+# no native dedup capability, so its track gets a separate fastp
+# dedup-only pass here first. Both tracks then go through Kraken2 against a
+# size-capped Standard database (bacteria+archaea+viral+human+UniVec_Core,
+# ~16GB) -- a purely-viral database can't do this, since it has no
+# human/bacterial genomes to match host contamination against, the
+# dominant contamination source in HIV proviral sequencing.
+#
+# scripts/utils/kraken2_filter_reads.sh keeps unclassified reads and reads
+# classified as viral, discarding anything whose assigned taxID descends
+# from Homo sapiens (9606) or Bacteria (2), resolved via the database's own
+# bundled nodes.dmp.
+
+log_msg "========== STEP 1h: Deduplication + Kraken2 contamination filtering =========="
+
+if [ ! -s "${KRAKEN2_DB}/nodes.dmp" ]; then
+    log_msg "WARNING: Kraken2 database not found at ${KRAKEN2_DB} -- skipping dedup+Kraken2 filtering. Download it first (see data/reference/kraken2_standard_16gb_db/SOURCE.md)."
+else
+    for SRR in "${SRR_ACCESSIONS[@]}"; do
+        # --- Trimmomatic track: dedup first (fastp --dedup-only pass), then Kraken2 ---
+        TRIMMOMATIC_R1="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_paired.fastq.gz"
+        TRIMMOMATIC_R2="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_paired.fastq.gz"
+        DEDUP_R1="${DEDUP_TRIMMOMATIC_DIR}/${SRR}_1.dedup.fastq.gz"
+        DEDUP_R2="${DEDUP_TRIMMOMATIC_DIR}/${SRR}_2.dedup.fastq.gz"
+
+        if [ -s "${TRIMMOMATIC_R1}" ] && [ -s "${TRIMMOMATIC_R2}" ] && is_valid_gz "${TRIMMOMATIC_R1}" && is_valid_gz "${TRIMMOMATIC_R2}"; then
+            if [ ! -s "${DEDUP_R1}" ] || [ ! -s "${DEDUP_R2}" ] || ! is_valid_gz "${DEDUP_R1}" || ! is_valid_gz "${DEDUP_R2}"; then
+                log_msg "Deduplicating Trimmomatic output for ${SRR}..."
+                bash "${BASE_DIR}/scripts/utils/fastp_dedup.sh" \
+                    "${TRIMMOMATIC_R1}" "${TRIMMOMATIC_R2}" "${DEDUP_R1}" "${DEDUP_R2}" \
+                    "${DEDUP_TRIMMOMATIC_DIR}/${SRR}_dedup_fastp" \
+                    2>&1 | tee "${LOG_DIR}/${SRR}_dedup_trimmomatic.log"
+                check_exit "fastp dedup (Trimmomatic track) failed for ${SRR}"
+            fi
+
+            if [ -s "${DEDUP_R1}" ] && [ -s "${DEDUP_R2}" ]; then
+                KRAKEN_R1_OUT="${KRAKEN2_TRIMMOMATIC_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
+                KRAKEN_R2_OUT="${KRAKEN2_TRIMMOMATIC_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+                if [ ! -s "${KRAKEN_R1_OUT}" ] || [ ! -s "${KRAKEN_R2_OUT}" ]; then
+                    log_msg "Running Kraken2 (Trimmomatic track) on ${SRR}..."
+                    bash "${BASE_DIR}/scripts/utils/kraken2_filter_reads.sh" \
+                        "${DEDUP_R1}" "${DEDUP_R2}" "${KRAKEN2_TRIMMOMATIC_DIR}" "${SRR}" "${KRAKEN2_DB}" \
+                        2>&1 | tee "${LOG_DIR}/${SRR}_kraken2_trimmomatic.log"
+                    check_exit "Kraken2 (Trimmomatic track) failed for ${SRR}"
+                fi
+            fi
+        else
+            log_msg "WARNING: Trimmomatic output not found for ${SRR}, skipping its dedup+Kraken2 pass."
+        fi
+
+        # --- fastp track: already deduplicated above, straight to Kraken2 ---
+        FASTP_R1="${TRIMMED_FASTP_DIR}/${SRR}_1.trimmed.fastq.gz"
+        FASTP_R2="${TRIMMED_FASTP_DIR}/${SRR}_2.trimmed.fastq.gz"
+        if [ -s "${FASTP_R1}" ] && [ -s "${FASTP_R2}" ] && is_valid_gz "${FASTP_R1}" && is_valid_gz "${FASTP_R2}"; then
+            KRAKEN_R1_OUT="${KRAKEN2_FASTP_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
+            KRAKEN_R2_OUT="${KRAKEN2_FASTP_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+            if [ ! -s "${KRAKEN_R1_OUT}" ] || [ ! -s "${KRAKEN_R2_OUT}" ]; then
+                log_msg "Running Kraken2 (fastp track) on ${SRR}..."
+                bash "${BASE_DIR}/scripts/utils/kraken2_filter_reads.sh" \
+                    "${FASTP_R1}" "${FASTP_R2}" "${KRAKEN2_FASTP_DIR}" "${SRR}" "${KRAKEN2_DB}" \
+                    2>&1 | tee "${LOG_DIR}/${SRR}_kraken2_fastp.log"
+                check_exit "Kraken2 (fastp track) failed for ${SRR}"
+            fi
+        else
+            log_msg "WARNING: fastp output not found for ${SRR}, skipping its Kraken2 pass."
+        fi
+
+        log_msg "Deduplication + Kraken2 filtering completed for ${SRR}"
+    done
+fi
+
+##==========================================================================##
 ##                          STEP 1 COMPLETE                                  ##
 ##==========================================================================##
 
@@ -554,6 +635,9 @@ log_msg "Samples processed:         ${#SRR_ACCESSIONS[@]}"
 log_msg "Raw data:                  ${RAW_DIR}"
 log_msg "Trimmomatic output:        ${TRIMMED_TRIMMOMATIC_DIR}"
 log_msg "fastp output:              ${TRIMMED_FASTP_DIR}"
+log_msg "Deduplicated (Trimmomatic): ${DEDUP_TRIMMOMATIC_DIR}"
+log_msg "Kraken2-filtered (Trimmomatic): ${KRAKEN2_TRIMMOMATIC_DIR}"
+log_msg "Kraken2-filtered (fastp, recommended production input): ${KRAKEN2_FASTP_DIR}"
 log_msg "FastQC+Trimmomatic MultiQC: ${MULTIQC_DIR}/fastqc_trimmomatic_report.html"
 log_msg "fastp MultiQC:              ${MULTIQC_DIR}/fastp_report.html"
 log_msg "=========================================="

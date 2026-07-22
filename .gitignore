@@ -34,6 +34,13 @@ data/processed/oxnano/filtered/
 data/raw/illumina/
 data/processed/illumina/trimmed_trimmomatic/
 data/processed/illumina/trimmed_fastp/
+data/processed/illumina/dedup_trimmomatic/
+data/processed/illumina/kraken2_trimmomatic/
+data/processed/illumina/kraken2_fastp/
+
+# Kraken2 database (~16GB index) -- re-downloadable, see SOURCE.md for the URL
+data/reference/kraken2_standard_16gb_db/*
+!data/reference/kraken2_standard_16gb_db/SOURCE.md
 
 # SRA prefetch caches (in case the default ~/ncbi location is used)
 ncbi/

@@ -21,7 +21,10 @@ dependencies:
   - porechop_abi
 
   # Contamination Removal
-  - kraken2
+  - kraken2         # needs a separate database download, not bundled by
+                    # conda -- see data/reference/kraken2_standard_16gb_db/SOURCE.md.
+                    # Was previously listed here but never actually invoked
+                    # anywhere in the pipeline until this fix.
 
   # Sequence download and manipulation
   - sra-tools
@@ -63,3 +66,6 @@ dependencies:
   - moods         # confirmed on bioconda (package "moods", Python module MOODS)
   - bioconductor-tfbstools
   - bioconductor-pqsfinder
+  # gquad (G-quadruplex prediction) is CRAN-only, not on any conda channel
+  # (confirmed by direct search) -- install separately after this env is
+  # created: Rscript -e 'install.packages("gquad", repos="https://cloud.r-project.org")'

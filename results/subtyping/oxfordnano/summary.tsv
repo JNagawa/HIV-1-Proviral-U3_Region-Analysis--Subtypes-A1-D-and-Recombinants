@@ -1,0 +1,4 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+subtyping_oxfordnano	jphmm	SRR16005717	0.01		127	0	n/a	(see ease_of_use_notes.md)
+subtyping_oxfordnano	jphmm	SRR16005712	0.00		127	0	n/a	(see ease_of_use_notes.md)
+subtyping_oxfordnano	jphmm	SRR16005715	0.00		127	0	n/a	(see ease_of_use_notes.md)

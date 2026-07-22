@@ -85,9 +85,9 @@ SRR_ACCESSIONS=(
 # Trimmomatic parameters
 TRIM_LEADING=3          # Cut bases from start if below quality
 TRIM_TRAILING=3         # Cut bases from end if below quality
-TRIM_SLIDINGWINDOW="4:20"  # Sliding window: window_size:quality_threshold
+TRIM_SLIDINGWINDOW="4:15"  # Sliding window: window_size:quality_threshold
 TRIM_MINLEN=50          # Minimum read length after trimming
-TRIM_AVGQUAL=20         # Minimum average quality of the read
+TRIM_AVGQUAL=15         # Minimum average quality of the read
 
 # Directory structure
 BASE_DIR="$(pwd)"
@@ -97,6 +97,9 @@ FASTQC_PRE_DIR="${QC_DIR}/fastqc_pre"
 FASTQC_POST_DIR="${QC_DIR}/fastqc_post"
 MULTIQC_DIR="${QC_DIR}/multiqc"
 TRIMMED_DIR="${BASE_DIR}/data/processed/illumina/trimmed_trimmomatic"
+DEDUP_DIR="${BASE_DIR}/data/processed/illumina/dedup_trimmomatic"
+KRAKEN2_DIR="${BASE_DIR}/data/processed/illumina/kraken2_trimmomatic"
+KRAKEN2_DB="${BASE_DIR}/data/reference/kraken2_standard_16gb_db"
 LOG_DIR="${BASE_DIR}/logs"
 ALIGN_DIR="${BASE_DIR}/data/processed/illumina/alignments"
 FILTER_DIR="${BASE_DIR}/data/processed/illumina/filtering"
@@ -414,6 +417,71 @@ check_exit "MultiQC failed"
 log_msg "MultiQC report generated: ${MULTIQC_DIR}/illumina_qc_report.html"
 
 ##==========================================================================##
+##  STEP 6.5: DEDUPLICATION + KRAKEN2 HOST/BACTERIAL CONTAMINATION FILTER    ##
+##==========================================================================##
+# Per the tools review's recommended chain (fastp -> Kraken2 -> SHIVER):
+# Trimmomatic has no native dedup capability, so a separate fastp
+# dedup-only pass runs first, then Kraken2 filters host/bacterial reads
+# against a size-capped Standard database (bacteria+archaea+viral+human+
+# UniVec_Core, ~16GB) -- a purely-viral database can't do this job, since
+# it has no human/bacterial genomes to match host contamination against.
+# scripts/utils/kraken2_filter_reads.sh keeps unclassified reads and reads
+# classified as viral, discarding anything descending from Homo sapiens
+# (9606) or Bacteria (2) per the database's own bundled nodes.dmp.
+#
+# NOTE: existing *_bwa.done checkpoints from a prior run (before this step
+# existed) point at Trimmomatic's un-deduplicated, unfiltered output --
+# they are NOT automatically invalidated here. Clear the relevant
+# checkpoints manually to reprocess already-mapped samples through this
+# new filtering step.
+
+log_msg "========== STEP 6.5: Deduplication + Kraken2 contamination filtering =========="
+
+mkdir -p "${DEDUP_DIR}" "${KRAKEN2_DIR}"
+
+if [ ! -s "${KRAKEN2_DB}/nodes.dmp" ]; then
+    log_msg "WARNING: Kraken2 database not found at ${KRAKEN2_DB} -- skipping dedup+Kraken2 filtering. Reference mapping below will fall back to plain Trimmomatic output."
+else
+    for SRR in "${SRR_ACCESSIONS[@]}"; do
+        R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"
+        R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"
+        DEDUP_R1="${DEDUP_DIR}/${SRR}_1.dedup.fastq.gz"
+        DEDUP_R2="${DEDUP_DIR}/${SRR}_2.dedup.fastq.gz"
+        KRAKEN_R1="${KRAKEN2_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
+        KRAKEN_R2="${KRAKEN2_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+
+        if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then
+            log_msg "WARNING: Trimmomatic output not found or corrupted for ${SRR}, skipping dedup+Kraken2."
+            continue
+        fi
+
+        if is_step_done "${CHECKPOINT_DIR}/${SRR}_kraken2.done" "${KRAKEN_R1}" "${KRAKEN_R2}"; then
+            log_msg "Dedup+Kraken2 filtering already completed for ${SRR}, skipping."
+            continue
+        fi
+
+        if [ ! -s "${DEDUP_R1}" ] || [ ! -s "${DEDUP_R2}" ] || ! is_valid_gz "${DEDUP_R1}" || ! is_valid_gz "${DEDUP_R2}"; then
+            log_msg "Deduplicating ${SRR}..."
+            bash "${BASE_DIR}/scripts/utils/fastp_dedup.sh" \
+                "${R1_PAIRED}" "${R2_PAIRED}" "${DEDUP_R1}" "${DEDUP_R2}" \
+                "${DEDUP_DIR}/${SRR}_dedup_fastp" \
+                2>&1 | tee "${LOG_DIR}/${SRR}_dedup.log"
+            check_exit "fastp dedup failed for ${SRR}"
+        fi
+
+        log_msg "Running Kraken2 on ${SRR}..."
+        bash "${BASE_DIR}/scripts/utils/kraken2_filter_reads.sh" \
+            "${DEDUP_R1}" "${DEDUP_R2}" "${KRAKEN2_DIR}" "${SRR}" "${KRAKEN2_DB}" \
+            2>&1 | tee "${LOG_DIR}/${SRR}_kraken2.log"
+        check_exit "Kraken2 filtering failed for ${SRR}"
+        verify_nonempty "${KRAKEN_R1}" "Kraken2-filtered reads for ${SRR}"
+        touch "${CHECKPOINT_DIR}/${SRR}_kraken2.done"
+
+        log_msg "Dedup+Kraken2 filtering completed for ${SRR}"
+    done
+fi
+
+##==========================================================================##
 ##               STEP 7: REFERENCE MAPPING (BWA & SAMTOOLS)                  ##
 ##==========================================================================##
 
@@ -439,8 +507,15 @@ MAPPED_COUNT=0
 TOTAL_TO_MAP=0
 
 for SRR in "${SRR_ACCESSIONS[@]}"; do
-    R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"
-    R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"
+    # Prefer deduplicated, Kraken2-filtered reads (STEP 6.5); fall back to
+    # plain Trimmomatic output if filtering was skipped (e.g. Kraken2 DB
+    # not present yet).
+    R1_PAIRED="${KRAKEN2_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
+    R2_PAIRED="${KRAKEN2_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ]; then
+        R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"
+        R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"
+    fi
     BAM_OUT="${ALIGN_DIR}/bam/${SRR}.sorted.bam"
     VCF_OUT="${ALIGN_DIR}/bam/${SRR}.vcf.gz"
     CONSENSUS_OUT="${ALIGN_DIR}/${SRR}_consensus.fasta"
@@ -611,12 +686,41 @@ fi
 CHKPT="${CHECKPOINT_DIR}/motif_mapping.done"
 
 if [ ! -f "${CHKPT}" ] && [ -s "${U3_EXTRACTED}" ]; then
-    log_msg "Motif scanning and G-quadruplex prediction are pending tool_comparison results (not yet wired in)."
-    # 1. Motif scanning with FIMO (requires JASPAR database)
-    # fimo --oc "${MOTIF_DIR}/fimo_out" JASPAR2024_CORE_vertebrates_non-redundant_pfms.meme "${U3_EXTRACTED}" || true
+    log_msg "Running motif scanning (FIMO) and G-quadruplex prediction (gquad + pqsfinder) on the extracted U3 regions..."
 
-    # 2. G-quadruplex prediction (pqsfinder/gquad in R)
-    # Rscript scripts/predict_g4.R "${U3_EXTRACTED}" "${MOTIF_DIR}" || true
+    # 1. TFBS motif scanning with FIMO against the 6 core JASPAR TFs --
+    #    FIMO is the comparison harness's recommended winner (fastest,
+    #    cleanest output; see results/motif_mapping/illumina/ease_of_use_notes.md).
+    FIMO_OUT="${MOTIF_DIR}/fimo_out"
+    fimo --oc "${FIMO_OUT}" --thresh 1e-4 "${REF_DIR}/jaspar/core6_pfms.meme" "${U3_EXTRACTED}" \
+        > "${LOG_DIR}/motif_fimo.log" 2>&1
+    if [ -s "${FIMO_OUT}/fimo.tsv" ]; then
+        log_msg "FIMO motif scan complete: ${FIMO_OUT}/fimo.tsv"
+    else
+        log_msg "WARNING: FIMO produced no output, see ${LOG_DIR}/motif_fimo.log"
+    fi
+
+    # 2. G-quadruplex prediction: gquad (primary, per the tools review) and
+    #    pqsfinder (confirmation pass, imperfection-tolerant scoring).
+    GQUAD_OUT="${MOTIF_DIR}/gquad_out.gff3"
+    bash "${BASE_DIR}/scripts/motif_mapping/illumina/run_gquad.sh" "${U3_EXTRACTED}" "${GQUAD_OUT}" \
+        > "${LOG_DIR}/motif_gquad.log" 2>&1
+    if [ -s "${GQUAD_OUT}" ]; then
+        log_msg "gquad G-quadruplex prediction complete: ${GQUAD_OUT}"
+    else
+        log_msg "WARNING: gquad produced no output, see ${LOG_DIR}/motif_gquad.log"
+    fi
+
+    PQSFINDER_OUT="${MOTIF_DIR}/pqsfinder_out.gff3"
+    bash "${BASE_DIR}/scripts/motif_mapping/illumina/run_pqsfinder.sh" "${U3_EXTRACTED}" "${PQSFINDER_OUT}" \
+        > "${LOG_DIR}/motif_pqsfinder.log" 2>&1
+    if [ -s "${PQSFINDER_OUT}" ]; then
+        log_msg "pqsfinder G-quadruplex prediction complete: ${PQSFINDER_OUT}"
+    else
+        log_msg "WARNING: pqsfinder produced no output, see ${LOG_DIR}/motif_pqsfinder.log"
+    fi
+
+    touch "${CHKPT}"
 fi
 
 ##==========================================================================##
