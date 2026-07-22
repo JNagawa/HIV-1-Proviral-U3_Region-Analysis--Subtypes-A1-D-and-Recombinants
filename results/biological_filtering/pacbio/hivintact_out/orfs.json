@@ -1,0 +1,87 @@
+{
+    "K03455.1": [
+        {
+            "orientation": "forward",
+            "start": null,
+            "end": 2291
+        },
+        {
+            "orientation": "forward",
+            "start": 2085,
+            "end": 5095
+        },
+        {
+            "orientation": "forward",
+            "start": 6204,
+            "end": 8794
+        }
+    ],
+    "124_4": [
+        {
+            "orientation": "forward",
+            "start": 3348,
+            "end": 5095
+        },
+        {
+            "orientation": "forward",
+            "start": 6201,
+            "end": 7561
+        },
+        {
+            "orientation": "forward",
+            "start": 7563,
+            "end": 8794
+        }
+    ],
+    "128_5": [
+        {
+            "orientation": "forward",
+            "start": null,
+            "end": 2291
+        },
+        {
+            "orientation": "forward",
+            "start": 2085,
+            "end": 5095
+        },
+        {
+            "orientation": "forward",
+            "start": 6201,
+            "end": 8794
+        }
+    ],
+    "203_3": [
+        {
+            "orientation": "forward",
+            "start": null,
+            "end": 2291
+        },
+        {
+            "orientation": "forward",
+            "start": 2085,
+            "end": 5095
+        },
+        {
+            "orientation": "forward",
+            "start": 6204,
+            "end": 8794
+        }
+    ],
+    "211_0": [
+        {
+            "orientation": "forward",
+            "start": null,
+            "end": 2291
+        },
+        {
+            "orientation": "forward",
+            "start": 2085,
+            "end": 5095
+        },
+        {
+            "orientation": "forward",
+            "start": 6204,
+            "end": 8794
+        }
+    ]
+}

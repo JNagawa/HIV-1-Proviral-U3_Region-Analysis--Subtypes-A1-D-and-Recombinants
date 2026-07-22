@@ -1,0 +1,8 @@
+motif_id	motif_alt_id	sequence_name	start	stop	strand	score	p-value	q-value	matched_sequence
+MA0107.1	RELA	K03455.1	350	359	+	15.8878	3.76e-06	0.00157	GGGACTTTCC
+MA0107.1	RELA	K03455.1	364	373	+	15.8878	3.76e-06	0.00157	GGGACTTTCC
+MA0079.5	SP1	K03455.1	388	396	+	10.5408	4.71e-05	0.0362	TGGGCGGGA
+
+# FIMO (Find Individual Motif Occurrences): Version 5.5.9 compiled on May 27 2026 at 12:41:17
+# The format of this file is described at https://meme-suite.org/meme/doc/fimo-output-format.html#tsv_results.
+# fimo --oc /etc/ace-data/home/jnagawa/Internship/results/motif_mapping/pacbio/fimo_positive_control_out --thresh 1e-4 /etc/ace-data/home/jnagawa/Internship/data/reference/jaspar/core6_pfms.meme /etc/ace-data/home/jnagawa/Internship/results/motif_mapping/pacbio/hxb2_u3_only.fasta

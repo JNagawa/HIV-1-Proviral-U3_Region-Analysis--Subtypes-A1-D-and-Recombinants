@@ -1,0 +1,10 @@
+# Output of the jpHMM. 
+#
+# Predicted recombination for the following query sequences:
+#
+# predicted subtypes for sequence '203_3': 
+203_3	jpHMM	5'-Insertion	0	788	.	+	.
+203_3	jpHMM	A1	789	1164	.	+	.
+203_3	jpHMM	B	1165	9410	.	+	.
+203_3	jpHMM	3'-Insertion	9411	9718	.	+	.
+

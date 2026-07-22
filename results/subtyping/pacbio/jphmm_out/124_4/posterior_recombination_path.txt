@@ -1,0 +1,18 @@
+# Output of the 'path' defined by the posterior probabilities of the query sequence(s). 
+#
+#   format: 
+#   sequence_name 
+#   start_position	 end_position	 subtype with highest posterior prob 
+#
+# output based on raw sequence positions 
+# of the following sequence(s): 
+
+>124_4
+1	789	5'-Insertion
+790	5078	D
+5079	5333	A1
+5334	8696	D
+8697	9078	B
+9079	9411	D
+9412	9719	3'-Insertion
+

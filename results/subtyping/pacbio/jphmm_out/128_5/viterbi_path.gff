@@ -1,0 +1,13 @@
+# Output of the jpHMM. 
+#
+# Predicted recombination for the following query sequences:
+#
+# predicted subtypes for sequence '128_5': 
+128_5	jpHMM	5'-Insertion	0	788	.	+	.
+128_5	jpHMM	B	789	1612	.	+	.
+128_5	jpHMM	D	1613	4696	.	+	.
+128_5	jpHMM	A1	4697	5546	.	+	.
+128_5	jpHMM	D	5547	7016	.	+	.
+128_5	jpHMM	B	7017	9410	.	+	.
+128_5	jpHMM	3'-Insertion	9411	9718	.	+	.
+

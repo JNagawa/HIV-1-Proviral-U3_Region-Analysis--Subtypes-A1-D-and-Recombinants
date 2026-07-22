@@ -1,0 +1,14 @@
+# Output of the jpHMM. 
+#
+#   chosen parameters: 
+#	jump probability: 	1e-09
+#
+#   format: 
+#   sequence_name 
+#   start_position	 end_position	 predicted_subtype 
+#
+# predicted recombination with breakpoints based on sequence positions with gaps 
+# of the following sequence(s): 
+# (only if the sequence contains gaps; if not, please see 'recombination.txt' for the results)
+
+>128_5 (bw=1e-20)

@@ -100,6 +100,21 @@
   .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
   .band-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.35}
 
+  /* findings callout */
+  .finding{background:var(--accent-soft);border:1px solid #e8d3c8;border-radius:6px;
+           padding:11px 14px;margin-top:14px}
+  .finding .fl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+               color:var(--accent);display:block;margin-bottom:3px}
+  .finding p{font-size:13px;line-height:1.45;color:var(--ink)}
+  .msa-img{width:100%;border:1px solid var(--hair);border-radius:6px;margin-top:4px}
+  .msa-cap{font-size:11px;color:var(--muted);margin-top:6px}
+  .ftab{width:100%;border-collapse:collapse;font-size:13px;margin-top:2px}
+  .ftab th,.ftab td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--hair)}
+  .ftab th:first-child,.ftab td:first-child{text-align:left}
+  .ftab thead th{background:var(--accent-soft);color:var(--ink);font-weight:700;font-size:12px}
+  .ftab td{color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .ftab td:first-child{color:var(--ink);font-weight:600}
+
   /* stat tiles */
   .tiles{display:flex;flex-direction:column;gap:12px}
   .tile{border:1px solid var(--hair);border-radius:6px;padding:13px 16px;background:#fcfcfb}
@@ -175,7 +190,7 @@
         <div class="row"><div class="lab">SRR908434</div><div class="track"><div class="bar" style="--v:13%"></div></div><div class="val">13.0%</div></div>
         <div class="row"><div class="lab">SRR908441</div><div class="track"><div class="bar" style="--v:30%"></div></div><div class="val">30.3%</div></div>
         <div class="row"><div class="lab">SRR908446</div><div class="track"><div class="bar" style="--v:67%"></div></div><div class="val">66.5%</div></div>
-        <div class="band-note">Kraken2 then removed up to <b>~45%</b> of reads from the most-contaminated sample (SRR908446 — ~40% human by the Kraken report), vs only ~7% from the cleanest.</div>
+        <div class="finding"><span class="fl">Finding</span><p>fastp is the better trimmer here — same quality bar, far higher yield and ~3× faster. Host contamination is real and sample-variable: Kraken2 removed ~45% of reads from the most-contaminated sample (SRR908446, ~40% human) vs ~7% from the cleanest — so contamination filtering is essential, not optional.</p></div>
       </div>
     </div>
   </div>
@@ -235,7 +250,7 @@
           <span><i class="dot" style="background:var(--s1)"></i>BWA consensus (valid, 0% N)</span>
           <span><i class="dot" style="background:var(--s2)"></i>SPAdes (below 8&nbsp;kb)</span>
         </div>
-        <div class="band-note">SHIVER: not yet a data point — blocked at setup (see next slide).</div>
+        <div class="finding"><span class="fl">Finding</span><p>BWA + bcftools consensus is the clear pick for this cohort — full-length (9,719 bp, 0% N) on every sample regardless of depth. SPAdes fragments (420–1,786 bp) and worsens after contamination removal, so de-novo is coverage-sensitive here. SHIVER pending its final fix.</p></div>
       </div>
     </div>
   </div>
@@ -283,13 +298,11 @@
       </ul>
     </div>
     <div>
-      <div class="chart">
-        <div class="ct">Alignment runtime</div>
-        <div class="cs">seconds · 5 sequences (HXB2 + 4 consensus)</div>
-        <div class="row"><div class="lab">MAFFT</div><div class="track"><div class="bar" style="--v:38%;--c:var(--s1)"></div></div><div class="val">79 s</div></div>
-        <div class="row"><div class="lab">MUSCLE</div><div class="track"><div class="bar" style="--v:56%;--c:var(--s1)"></div></div><div class="val">116 s</div></div>
-        <div class="row"><div class="lab">Clustal&nbsp;Ω</div><div class="track"><div class="bar" style="--v:100%;--c:var(--s1)"></div></div><div class="val">205 s</div></div>
-        <div class="band-note">MAFFT L-INS-i is both the most accurate for divergent HIV and, on this small set, the fastest — a clear pick for the final alignment.</div>
+      <img class="msa-img" src="figures/msa_u3_snapshot.png" alt="U3 MSA snapshot">
+      <div class="msa-cap">Coloured U3 alignment (MAFFT L-INS-i): HXB2 + 4 sample consensus, 453 columns; top band = per-column conservation. Runtime: MAFFT 79&nbsp;s · MUSCLE 116&nbsp;s · Clustal&nbsp;Ω 205&nbsp;s.</div>
+      <div class="finding">
+        <span class="fl">Finding</span>
+        <p>MAFFT L-INS-i is the pick — the most accurate mode for divergent HIV and also the fastest here. The U3 is near-completely conserved across the 4 samples at the resolution the motif scan depends on.</p>
       </div>
     </div>
   </div>
@@ -337,6 +350,7 @@
         <div class="tile"><div class="n">0 / 5</div><div class="k"><b>HIVIntact</b> — 0 intact, 5 non-intact (read with caution: subtype-B-optimised)</div></div>
         <div class="tile"><div class="n no">setup</div><div class="k"><b>HIVSeqinR</b> — R-based Rakai standard; pending a working run (see next)</div></div>
       </div>
+      <div class="finding"><span class="fl">Finding</span><p>The two-stage filter is viable. HIVSeqinR (explicitly Rakai A1/D-validated) is the primary intactness caller once finalised; HIVIntact is a fast cross-check but subtype-B-biased, so read its A1/D calls with caution.</p></div>
     </div>
   </div>
   <div class="foot">Biological Filtering</div><div class="pagenum">8</div>
@@ -387,7 +401,7 @@
         <div class="cs">jpHMM runs per sample (~10 min each); IQ-TREE builds one tree</div>
         <div class="row"><div class="lab">jpHMM</div><div class="track"><div class="bar" style="--v:100%;--c:var(--s1)"></div></div><div class="val">~627 s</div></div>
         <div class="row"><div class="lab">IQ-TREE 2</div><div class="track"><div class="bar" style="--v:1%;--c:var(--s2)"></div></div><div class="val">1 s</div></div>
-        <div class="band-note">jpHMM is the heavy step (breakpoint HMM, run 4× — once per sample); IQ-TREE's ML tree over 5 aligned sequences is near-instant.</div>
+        <div class="finding"><span class="fl">Finding</span><p>jpHMM + IQ-TREE 2 is a workable pairing — jpHMM gives per-sample recombination/breakpoint maps, IQ-TREE confirms the clustering. jpHMM dominates runtime (~10 min/sample, run 4×) vs IQ-TREE's ~1 s, so jpHMM is the step to parallelise for the full cohort.</p></div>
       </div>
     </div>
   </div>
@@ -430,22 +444,34 @@
       <ul>
         <li>Extracted <b>U3 (453&nbsp;bp, 5 seqs)</b> from the MAFFT alignment, anchored to HXB2's own annotated LTR coordinates.</li>
         <li>TFBS scanners (FIMO / MOODS / TFBSTools) use <b>JASPAR 2024 PWMs</b> for 6 TFs (NF-κB p65/p50, SP1, NFAT, AP-1, TBP); FIMO threshold <b>1e-4</b>.</li>
-        <li>G-quadruplex (gquad / pqsfinder) use <b>sequence G-tract rules</b> — no PWM database.</li>
+        <li><b>G-quadruplex</b> — <b>gquad</b> applies regex rules on G-tract runs &amp; loop lengths (four G≥3 tracts, short loops); <b>pqsfinder</b> runs an exhaustive, imperfection-tolerant search (tolerates bulges/mismatches) with a scoring model. Both scan the raw U3 — <b>no PWM/database</b>.</li>
         <li>Each tool runs a <b>positive control</b> on HXB2's own U3 first.</li>
       </ul>
     </div>
     <div>
       <div class="chart">
-        <div class="ct">Motif hits — subset (control)</div>
-        <div class="cs">hits across the 4-sample U3 set; (n) = HXB2 positive control</div>
-        <div class="row"><div class="lab">FIMO</div><div class="track"><div class="bar" style="--v:23%;--c:var(--s1)"></div></div><div class="val">16 (4)</div></div>
-        <div class="row"><div class="lab">MOODS</div><div class="track"><div class="bar" style="--v:14%;--c:var(--s1)"></div></div><div class="val">10 (2)</div></div>
-        <div class="row"><div class="lab">TFBSTools</div><div class="track"><div class="bar" style="--v:100%;--c:var(--s1)"></div></div><div class="val">70 (14)</div></div>
-        <div class="row"><div class="lab">gquad</div><div class="track"><div class="bar" style="--v:21%;--c:var(--s2)"></div></div><div class="val">15 (3)</div></div>
-        <div class="row"><div class="lab">pqsfinder</div><div class="track"><div class="bar" style="--v:7%;--c:var(--s2)"></div></div><div class="val">5 (1)</div></div>
-        <div class="legend">
-          <span><i class="dot" style="background:var(--s1)"></i>TFBS (PWM)</span>
-          <span><i class="dot" style="background:var(--s2)"></i>G-quadruplex</span>
+        <div class="ct">TFBS hits identified per factor</div>
+        <div class="cs">subset (4-sample U3 set) · JASPAR 2024 PWMs</div>
+        <table class="ftab">
+          <thead><tr><th>Transcription factor</th><th>FIMO</th><th>TFBSTools</th></tr></thead>
+          <tbody>
+            <tr><td>NF-κB p65 (RELA)</td><td>10</td><td>20</td></tr>
+            <tr><td>SP1</td><td>5</td><td>15</td></tr>
+            <tr><td>NFAT</td><td>0</td><td>15</td></tr>
+            <tr><td>TBP</td><td>0</td><td>20</td></tr>
+          </tbody>
+        </table>
+        <table class="ftab" style="margin-top:10px">
+          <thead><tr><th>G-quadruplex</th><th>control</th><th>subset</th></tr></thead>
+          <tbody>
+            <tr><td>gquad</td><td>3</td><td>15</td></tr>
+            <tr><td>pqsfinder</td><td>1</td><td>5</td></tr>
+          </tbody>
+        </table>
+        <div class="band-note">NF-κB p50 &amp; AP-1: 0 hits by both tools. TFBS totals — FIMO 16, MOODS 10, TFBSTools 70.</div>
+        <div class="finding">
+          <span class="fl">Finding</span>
+          <p>TFBS: both tools agree on the dominant sites (NF-κB p65, SP1); TFBSTools' looser scoring also surfaces NFAT/TBP. G4: gquad flags 15 putative quadruplex sites across the subset U3, pqsfinder a stricter 5 — consistent evidence of G-quadruplex potential in the U3 promoter. All passed the HXB2 control.</p>
         </div>
       </div>
     </div>

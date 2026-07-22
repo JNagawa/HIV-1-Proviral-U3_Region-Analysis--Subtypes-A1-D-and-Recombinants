@@ -1,0 +1,132 @@
+{
+    "K03455.1": [
+        {
+            "sequence_name": "K03455.1",
+            "error": "FrameshiftInOrf",
+            "message": "ORF gag at -1-1499 contains an out of frame indel, deletions 3 insertions 28."
+        },
+        {
+            "sequence_name": "K03455.1",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, A."
+        },
+        {
+            "sequence_name": "K03455.1",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpr, at 4767-5057 in the forward strand, got closest match 4767-5001"
+        },
+        {
+            "sequence_name": "K03455.1",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8056-8667 in the forward strand, got closest match 8026-8420"
+        }
+    ],
+    "124_4": [
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected an ORF, gag, at 1-1499 in the forward strand, got 2556-4303"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected an ORF, pol, at 1293-4303 in the forward strand, got 5418-6796"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "DeletionInOrf",
+            "message": "ORF pol at 5418-6796 can have maximum deletions 30, got 45"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected an ORF, env, at 5442-8052 in the forward strand, got 6798-8053"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, A."
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpr, at 4767-5057 in the forward strand, got closest match 4767-5001"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "FrameshiftInOrf",
+            "message": "Smaller ORF nef at 8056-8667 contains an out of frame indel: insertions 0 deletions 19."
+        }
+    ],
+    "128_5": [
+        {
+            "sequence_name": "128_5",
+            "error": "FrameshiftInOrf",
+            "message": "ORF gag at -1-1499 contains an out of frame indel, deletions 3 insertions 28."
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, A."
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpr, at 4767-5057 in the forward strand, got closest match 4767-5001"
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8056-8667 in the forward strand, got closest match 8026-8420"
+        }
+    ],
+    "203_3": [
+        {
+            "sequence_name": "203_3",
+            "error": "FrameshiftInOrf",
+            "message": "ORF gag at -1-1499 contains an out of frame indel, deletions 3 insertions 28."
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, A."
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpr, at 4767-5057 in the forward strand, got closest match 4767-5001"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8056-8667 in the forward strand, got closest match 8026-8420"
+        }
+    ],
+    "211_0": [
+        {
+            "sequence_name": "211_0",
+            "error": "FrameshiftInOrf",
+            "message": "ORF gag at -1-1499 contains an out of frame indel, deletions 3 insertions 28."
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, A."
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpr, at 4767-5057 in the forward strand, got closest match 4767-5001"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, tat_exon1, at 5038-5252 in the forward strand, got closest match 5063-5166"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8056-8667 in the forward strand, got closest match 8026-8420"
+        }
+    ]
+}

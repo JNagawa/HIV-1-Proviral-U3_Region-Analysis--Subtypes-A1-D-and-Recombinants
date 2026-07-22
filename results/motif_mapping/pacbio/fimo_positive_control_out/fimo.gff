@@ -1,0 +1,4 @@
+##gff-version 3
+K03455.1	fimo	nucleotide_motif	350	359	54.2	+	.	Name=MA0107.1_K03455.1+;Alias=RELA;ID=MA0107.1-RELA-1-K03455.1;pvalue=3.76e-06;qvalue=0.00157;sequence=GGGACTTTCC;
+K03455.1	fimo	nucleotide_motif	364	373	54.2	+	.	Name=MA0107.1_K03455.1+;Alias=RELA;ID=MA0107.1-RELA-2-K03455.1;pvalue=3.76e-06;qvalue=0.00157;sequence=GGGACTTTCC;
+K03455.1	fimo	nucleotide_motif	388	396	43.3	+	.	Name=MA0079.5_K03455.1+;Alias=SP1;ID=MA0079.5-SP1-1-K03455.1;pvalue=4.71e-05;qvalue=0.0362;sequence=TGGGCGGGA;
