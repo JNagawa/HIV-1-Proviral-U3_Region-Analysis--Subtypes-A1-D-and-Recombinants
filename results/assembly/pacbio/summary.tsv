@@ -1,0 +1,5 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+assembly_pacbio	minimap2_consensus	124_4	1.65		0	1	9719bp, 0.00% N	(see ease_of_use_notes.md)
+assembly_pacbio	minimap2_consensus	128_5	2.08		0	1	9719bp, 0.00% N	(see ease_of_use_notes.md)
+assembly_pacbio	minimap2_consensus	203_3	1.06		0	1	9719bp, 0.00% N	(see ease_of_use_notes.md)
+assembly_pacbio	minimap2_consensus	211_0	1.40		0	1	9719bp, 0.00% N	(see ease_of_use_notes.md)

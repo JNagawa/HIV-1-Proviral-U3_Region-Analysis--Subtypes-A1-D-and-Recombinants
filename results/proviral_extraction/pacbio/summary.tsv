@@ -1,0 +1,5 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+proviral_extraction_pacbio	minimap2mask+strip	124_4	1.20		0	1	41/41 reads yielded a proviral core; median core 766bp	(see ease_of_use_notes.md)
+proviral_extraction_pacbio	minimap2mask+strip	128_5	0.60		0	1	75/75 reads yielded a proviral core; median core 6027bp	(see ease_of_use_notes.md)
+proviral_extraction_pacbio	minimap2mask+strip	203_3	1.03		0	1	19/19 reads yielded a proviral core; median core 1859bp	(see ease_of_use_notes.md)
+proviral_extraction_pacbio	minimap2mask+strip	211_0	0.97		0	1	30/30 reads yielded a proviral core; median core 5125bp	(see ease_of_use_notes.md)

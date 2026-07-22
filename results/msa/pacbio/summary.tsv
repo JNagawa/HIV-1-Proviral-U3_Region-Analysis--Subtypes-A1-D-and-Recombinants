@@ -1,0 +1,2 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+msa_pacbio	mafft	all_subset	78.29		0	1	5/5 seqs retained, 9719.0 columns, 0.0% gap	(see ease_of_use_notes.md)

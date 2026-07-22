@@ -49,12 +49,17 @@ resolve_reads() {
     local lm="${RAW_DIR}/local_masked"
     # Highest priority: user-provided local host-N-masked HiFi (Path A). The
     # SMRTcap naming is "<sample>.fastq.hiv.unmasked.fa" -- "unmasked" = the HIV
-    # provirus is the unmasked (ACGT) part, host is N-masked. Accept that exact
-    # name, any .fa/.fasta under a per-sample subdir, or a flat file.
+    # provirus is the unmasked (ACGT) part, host is N-masked. Search RECURSIVELY
+    # under local_masked/ so an extra folder level from scp (e.g. the copied
+    # raw_smrtcap/ wrapper) doesn't hide the files. Prefer the exact SMRTcap
+    # name, then any .fa/.fasta whose basename starts with the sample id.
+    if [ -d "${lm}" ]; then
+        local hit
+        hit=$(find "${lm}" -type f -iname "${srr}.fastq.hiv.unmasked.fa" 2>/dev/null | head -1)
+        [ -z "${hit}" ] && hit=$(find "${lm}" -type f \( -iname "${srr}*.fa" -o -iname "${srr}*.fasta" \) 2>/dev/null | head -1)
+        [ -n "${hit}" ] && [ -s "${hit}" ] && { echo "${hit}"; return; }
+    fi
     for cand in \
-        "${lm}/${srr}/${srr}.fastq.hiv.unmasked.fa" \
-        ${lm}/${srr}/*.fa ${lm}/${srr}/*.fasta \
-        "${lm}/${srr}.fa" "${lm}/${srr}.fasta" \
         "${QC_DIR}/dedup_fastp_out/${srr}.dedup.fastq.gz" \
         "${QC_DIR}/kraken2_fastp_out/${srr}.kraken_filtered.fastq.gz" \
         "${QC_DIR}/fastp_out/${srr}.filtered.fastq.gz" \

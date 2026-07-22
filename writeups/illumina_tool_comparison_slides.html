@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Illumina Tool-Comparison — HIV-1 Proviral U3 Analysis</title>
+<!--
+  ============================================================================
+  HOW TO EDIT THESE SLIDES
+  ----------------------------------------------------------------------------
+  * Each slide is one <section class="slide"> ... </section> block below.
+    Edit the text directly between the tags — it's plain HTML.
+  * Bars/charts are plain HTML <div>s (class "bar"): change a bar's length by
+    editing its  style="--v:NN%"  (NN = percent of the chart's max), and the
+    number label beside it. No chart library, nothing to recompile.
+  * Colours live once in the :root block (CSS variables). Change --accent etc.
+    there and every slide updates.
+  * To present / export: open in any browser. To make a PDF, use the browser's
+    Print dialog -> "Save as PDF", Landscape, margins "None", and enable
+    "Background graphics". Each slide prints to its own page.
+  * Want this as an editable .pptx instead? Ask and I'll convert it.
+  ============================================================================
+-->
+<style>
+  :root{
+    --accent:#c8603a;          /* Claude warm coral — kicker/rules */
+    --accent-soft:#f4e6df;
+    --ink:#1a1a17;             /* primary text */
+    --ink-2:#565550;           /* secondary text */
+    --muted:#8f8d85;           /* labels/axis */
+    --hair:#e6e4dd;            /* hairlines */
+    --slide:#ffffff;           /* slide background — white, per request */
+    --plane:#f2f1ec;           /* screen backdrop behind slides */
+    /* dataviz validated categorical palette (light) */
+    --s1:#2a78d6;              /* blue  */
+    --s2:#eb6834;              /* orange */
+    --good:#0ca30c;
+    --bad:#d03b3b;
+    --track:#f0efe9;
+    --font:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--plane);font-family:var(--font);color:var(--ink);
+       -webkit-font-smoothing:antialiased;padding:28px 0}
+  .deck{display:flex;flex-direction:column;align-items:center;gap:26px}
+
+  /* 16:9 slide */
+  .slide{background:var(--slide);width:1180px;height:664px;position:relative;
+         padding:56px 64px 52px;border:1px solid var(--hair);
+         border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+          color:var(--accent);margin-bottom:6px}
+  .kicker .dim{color:var(--muted);font-weight:600}
+  h1.title{font-size:30px;font-weight:750;line-height:1.15;letter-spacing:-.01em;margin-bottom:4px}
+  .rule{height:3px;width:56px;background:var(--accent);border-radius:2px;margin:14px 0 22px}
+  .pagenum{position:absolute;right:26px;bottom:18px;font-size:12px;color:var(--muted);
+           font-variant-numeric:tabular-nums}
+  .foot{position:absolute;left:64px;bottom:18px;font-size:12px;color:var(--muted)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;height:calc(100% - 108px)}
+  .cols.wide-left{grid-template-columns:1.15fr .85fr}
+
+  h2.sub{font-size:15px;font-weight:700;color:var(--ink);margin:0 0 10px;
+         letter-spacing:.01em}
+  h2.sub .tag{font-weight:600;color:var(--muted);font-size:12.5px}
+
+  ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+  li{font-size:14.5px;line-height:1.45;color:var(--ink-2);padding-left:16px;position:relative}
+  li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;
+             border-radius:50%;background:var(--accent)}
+  li b{color:var(--ink);font-weight:650}
+  li .why{color:var(--muted);font-style:italic}
+
+  /* tool chips */
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .chip{font-size:12.5px;font-weight:600;color:var(--ink);background:var(--accent-soft);
+        border:1px solid #e8d3c8;border-radius:999px;padding:4px 11px}
+  .chip.win{background:#e4f3e4;border-color:#c2e4c2;color:#186b18}
+
+  /* challenge cards */
+  .cards{display:flex;flex-direction:column;gap:12px}
+  .card{border:1px solid var(--hair);border-left:3px solid var(--accent);
+        border-radius:5px;padding:11px 14px}
+  .card .p{font-size:13.5px;font-weight:680;color:var(--ink);margin-bottom:3px}
+  .card .r{font-size:13px;line-height:1.4;color:var(--ink-2)}
+  .card .r b{color:#186b18;font-weight:650}
+
+  /* CSS bar chart */
+  .chart{border:1px solid var(--hair);border-radius:6px;padding:16px 18px 14px;background:#fcfcfb}
+  .chart .ct{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:2px}
+  .chart .cs{font-size:11.5px;color:var(--muted);margin-bottom:14px}
+  .row{display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:10px;margin-bottom:9px}
+  .row .lab{font-size:12px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums}
+  .track{background:var(--track);border-radius:4px;height:16px;position:relative;overflow:hidden}
+  .bar{height:100%;width:var(--v);border-radius:4px;background:var(--c,var(--s1))}
+  .row .val{font-size:12px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums;min-width:52px}
+  .legend{display:flex;gap:16px;margin-top:10px;font-size:11.5px;color:var(--ink-2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .band-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.35}
+
+  /* stat tiles */
+  .tiles{display:flex;flex-direction:column;gap:12px}
+  .tile{border:1px solid var(--hair);border-radius:6px;padding:13px 16px;background:#fcfcfb}
+  .tile .n{font-size:26px;font-weight:750;letter-spacing:-.01em}
+  .tile .n.ok{color:var(--good)} .tile .n.no{color:var(--bad)}
+  .tile .k{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+
+  /* title slide */
+  .title-slide{display:flex;flex-direction:column;justify-content:center;height:100%}
+  .title-slide .big{font-size:40px;font-weight:780;line-height:1.1;letter-spacing:-.015em;max-width:780px}
+  .title-slide .lede{font-size:16px;color:var(--ink-2);margin-top:16px;max-width:680px;line-height:1.5}
+  .title-slide .meta{font-size:13px;color:var(--muted);margin-top:26px;line-height:1.7}
+  .steplist{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;max-width:760px}
+  .steplist .chip{background:#f6f5f1;border-color:var(--hair);color:var(--ink-2)}
+
+  @media print{
+    body{background:#fff;padding:0}
+    .deck{gap:0}
+    .slide{border:none;border-radius:0;box-shadow:none;width:100%;height:100vh;
+           page-break-after:always;break-after:page}
+    @page{size:landscape;margin:0}
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ==================== TITLE ==================== -->
+<section class="slide">
+  <div class="title-slide">
+    <div class="kicker">MSc Bioinformatics Internship · Rakai / Makerere</div>
+    <div class="big">Illumina (FLIP-Seq) Tool-Comparison Harness</div>
+    <div class="lede">Evidence-based tool selection for the HIV-1 proviral U3 analysis pipeline —
+      every automatable candidate tool from the tools review run side-by-side on a 4-sample
+      Illumina subset (SRR908437 / 434 / 441 / 446), per pipeline step.</div>
+    <div class="steplist">
+      <span class="chip">1 · Download &amp; QC</span>
+      <span class="chip">2 · Assembly</span>
+      <span class="chip">3 · Multiple Sequence Alignment</span>
+      <span class="chip">4 · Biological Filtering</span>
+      <span class="chip">5 · Subtyping</span>
+      <span class="chip">6 · U3 Extraction &amp; Motif Mapping</span>
+    </div>
+    <div class="meta">Jovita Nagawa · July 2026 &nbsp;•&nbsp; subset chosen by file-size (read-depth proxy) spread</div>
+  </div>
+  <div class="pagenum">1</div>
+</section>
+
+<!-- ==================== STEP 1 — DOWNLOAD & QC ==================== -->
+<section class="slide">
+  <div class="kicker">Step 1 <span class="dim">· Download &amp; Quality Control</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols wide-left">
+    <div>
+      <div class="chips">
+        <span class="chip">FastQC</span><span class="chip">fastp</span>
+        <span class="chip">Trimmomatic</span><span class="chip">Kraken2</span>
+      </div>
+      <h2 class="sub">What was done</h2>
+      <ul>
+        <li><b>fastp vs Trimmomatic</b> compared for trimming; FastQC gives the shared pre-trim baseline.</li>
+        <li>Both trimmers held to the <b>same quality bar</b> — sliding window 4:15, LEADING/TRAILING 3, MINLEN 50, AVGQUAL 15. <span class="why">so the comparison reflects the algorithms, not mismatched settings.</span></li>
+        <li>fastp run with <b>--cut_right</b> (to match Trimmomatic's window) and <b>--dedup</b>.</li>
+        <li><b>Kraken2</b> (16&nbsp;GB standard DB) removes reads descending from human (9606) or bacteria (2); keeps viral + unclassified. <span class="why">host is the dominant contaminant in proviral seq.</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Reads surviving Trimmomatic</div>
+        <div class="cs">% of pairs retained — varies widely by sample; fastp consistently retains more</div>
+        <div class="row"><div class="lab">SRR908437</div><div class="track"><div class="bar" style="--v:14%"></div></div><div class="val">14.2%</div></div>
+        <div class="row"><div class="lab">SRR908434</div><div class="track"><div class="bar" style="--v:13%"></div></div><div class="val">13.0%</div></div>
+        <div class="row"><div class="lab">SRR908441</div><div class="track"><div class="bar" style="--v:30%"></div></div><div class="val">30.3%</div></div>
+        <div class="row"><div class="lab">SRR908446</div><div class="track"><div class="bar" style="--v:67%"></div></div><div class="val">66.5%</div></div>
+        <div class="band-note">Kraken2 then removed up to <b>~45%</b> of reads from the most-contaminated sample (SRR908446 — ~40% human by the Kraken report), vs only ~7% from the cleanest.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Download &amp; QC</div><div class="pagenum">2</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 1 <span class="dim">· Download &amp; Quality Control</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card">
+      <div class="p">Kraken2 was declared in the environment but never actually invoked</div>
+      <div class="r">Contamination filtering was effectively missing from the pipeline. <b>Wired Kraken2 in as a real step</b> after each trimmer, filtering host/bacterial reads by an ancestor-walk over the DB's own <code>nodes.dmp</code> (bash/awk, no external taxonomy tool).</div>
+    </div>
+    <div class="card">
+      <div class="p">Kraken2 database is not bundled by conda (~16&nbsp;GB, &gt;50&nbsp;GB RAM)</div>
+      <div class="r">Requires a separate download. <b>Documented the exact source + build in <code>kraken2_standard_16gb_db/SOURCE.md</code></b> so it is reproducible.</div>
+    </div>
+    <div class="card">
+      <div class="p">fastp and Trimmomatic report different survival metrics (read count vs %)</div>
+      <div class="r">Not directly comparable at face value. <b>Recorded both native metrics</b> and held the two tools to identical thresholds; the qualitative result (fastp retains substantially more) is robust.</div>
+    </div>
+  </div>
+  <div class="foot">Download &amp; QC</div><div class="pagenum">3</div>
+</section>
+
+<!-- ==================== STEP 2 — ASSEMBLY ==================== -->
+<section class="slide">
+  <div class="kicker">Step 2 <span class="dim">· Genome Assembly</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols">
+    <div>
+      <div class="chips">
+        <span class="chip win">BWA + bcftools consensus</span>
+        <span class="chip">SPAdes</span><span class="chip">SHIVER</span>
+      </div>
+      <h2 class="sub">What was done</h2>
+      <ul>
+        <li><b>Reference-guided</b> (BWA-MEM&nbsp;→&nbsp;HXB2&nbsp;+&nbsp;bcftools consensus) vs <b>de novo</b> (SPAdes, best-HXB2-BLAST contig) vs <b>sample-specific</b> (SHIVER, LANL 2021 compendium alignment).</li>
+        <li>SPAdes <b>pinned to 3.15.5</b>. <span class="why">4.x crashes with SIGILL on this node (no AVX2).</span></li>
+        <li>Validity = consensus length in the <b>8–10&nbsp;kb</b> full-genome window.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Consensus length by tool &amp; sample</div>
+        <div class="cs">BWA reconstructs full-length everywhere; SPAdes fragments</div>
+        <div class="row"><div class="lab">437 · BWA</div><div class="track"><div class="bar" style="--v:97%;--c:var(--s1)"></div></div><div class="val">9719</div></div>
+        <div class="row"><div class="lab">437 · SPAdes</div><div class="track"><div class="bar" style="--v:4%;--c:var(--s2)"></div></div><div class="val">420</div></div>
+        <div class="row"><div class="lab">441 · BWA</div><div class="track"><div class="bar" style="--v:97%;--c:var(--s1)"></div></div><div class="val">9719</div></div>
+        <div class="row"><div class="lab">441 · SPAdes</div><div class="track"><div class="bar" style="--v:18%;--c:var(--s2)"></div></div><div class="val">1786</div></div>
+        <div class="row"><div class="lab">446 · BWA</div><div class="track"><div class="bar" style="--v:97%;--c:var(--s1)"></div></div><div class="val">9719</div></div>
+        <div class="row"><div class="lab">446 · SPAdes</div><div class="track"><div class="bar" style="--v:13%;--c:var(--s2)"></div></div><div class="val">1275</div></div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--s1)"></i>BWA consensus (valid, 0% N)</span>
+          <span><i class="dot" style="background:var(--s2)"></i>SPAdes (below 8&nbsp;kb)</span>
+        </div>
+        <div class="band-note">SHIVER: not yet a data point — blocked at setup (see next slide).</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Assembly</div><div class="pagenum">4</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 2 <span class="dim">· Genome Assembly</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card">
+      <div class="p">SPAdes 4.x crashed with SIGILL (“Illegal instruction”) on every sample</div>
+      <div class="r">Root cause: bioconda's default build needs AVX2/FMA, absent on this CPU. <b>Pinned <code>spades=3.15.5</code></b> (last pre-4.x release) — runs to completion.</div>
+    </div>
+    <div class="card">
+      <div class="p">SPAdes assembly quality is coverage-sensitive — and got worse after Kraken2</div>
+      <div class="r">Only the deepest sample ever reached full length; removing ~45% of contaminated reads dropped it below the threshold too. <b>Documented as a real finding</b>: contamination removal can hurt de-novo depth. BWA (reference-guided) was unaffected.</div>
+    </div>
+    <div class="card">
+      <div class="p">SHIVER needed a manual LANL reference alignment, then hit a missing <code>bc</code></div>
+      <div class="r">(1) The LANL compendium alignment has no static URL — <b>automated the retrieval with a documented <code>curl</code> recipe</b>. (2) <code>shiver_init</code> quits because compute nodes lack <code>bc</code> — <b>added <code>bc</code> to the environment</b> (fix in progress; SHIVER re-run pending).</div>
+    </div>
+  </div>
+  <div class="foot">Assembly</div><div class="pagenum">5</div>
+</section>
+
+<!-- ==================== STEP 3 — MSA ==================== -->
+<section class="slide">
+  <div class="kicker">Step 3 <span class="dim">· Multiple Sequence Alignment</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols wide-left">
+    <div>
+      <div class="chips">
+        <span class="chip win">MAFFT (L-INS-i)</span>
+        <span class="chip">MUSCLE</span><span class="chip">Clustal Omega</span>
+      </div>
+      <h2 class="sub">What was done</h2>
+      <ul>
+        <li>Aligned HXB2 + the 4 sample consensus sequences with each tool.</li>
+        <li>MAFFT run as <b>L-INS-i</b> (<code>--localpair --maxiterate 1000</code>). <span class="why">the review's pick — highest base-pair accuracy on divergent A1/D, needed for precise U3 coordinate mapping.</span></li>
+        <li>MUSCLE <b>pinned to classic 3.8</b>; Clustal Omega with <code>--force</code>.</li>
+        <li>All three retained <b>5/5</b> sequences; MAFFT was also the fastest.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Alignment runtime</div>
+        <div class="cs">seconds · 5 sequences (HXB2 + 4 consensus)</div>
+        <div class="row"><div class="lab">MAFFT</div><div class="track"><div class="bar" style="--v:38%;--c:var(--s1)"></div></div><div class="val">79 s</div></div>
+        <div class="row"><div class="lab">MUSCLE</div><div class="track"><div class="bar" style="--v:56%;--c:var(--s1)"></div></div><div class="val">116 s</div></div>
+        <div class="row"><div class="lab">Clustal&nbsp;Ω</div><div class="track"><div class="bar" style="--v:100%;--c:var(--s1)"></div></div><div class="val">205 s</div></div>
+        <div class="band-note">MAFFT L-INS-i is both the most accurate for divergent HIV and, on this small set, the fastest — a clear pick for the final alignment.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Multiple Sequence Alignment</div><div class="pagenum">6</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 3 <span class="dim">· Multiple Sequence Alignment</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card">
+      <div class="p">MUSCLE 5.3 crashed with SIGILL on this node</div>
+      <div class="r">Same AVX2 hardware limitation as SPAdes. <b>Pinned <code>muscle=3.8*</code></b> (no AVX2 requirement) — note its CLI differs (<code>-in/-out</code> vs v5's <code>-align/-output</code>).</div>
+    </div>
+    <div class="card">
+      <div class="p">MAFFT lowercases its output — downstream motif tools read that as “masked”</div>
+      <div class="r">FIMO / MOODS treat lowercase as soft-masked and skip it, silently yielding zero hits. <b>Forced the U3 extraction output to uppercase</b>, so scanners see real sequence.</div>
+    </div>
+  </div>
+  <div class="foot">Multiple Sequence Alignment</div><div class="pagenum">7</div>
+</section>
+
+<!-- ==================== STEP 4 — BIOLOGICAL FILTERING ==================== -->
+<section class="slide">
+  <div class="kicker">Step 4 <span class="dim">· Biological Filtering &amp; Intactness</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols">
+    <div>
+      <div class="chips">
+        <span class="chip">Poplars (Hypermut 3)</span>
+        <span class="chip">HIVSeqinR</span><span class="chip">HIVIntact</span>
+      </div>
+      <h2 class="sub">What was done</h2>
+      <ul>
+        <li><b>Two-stage filter</b> per the review: Poplars screens APOBEC G→A hypermutation, then structural intactness by HIVSeqinR (Rakai A1/D-validated) / HIVIntact.</li>
+        <li>Input built <b>HXB2-first</b>. <span class="why">Poplars uses the first record as its hypermutation reference.</span></li>
+        <li>HIVIntact run with <b>--subtype A1</b> for this cohort.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="tiles">
+        <div class="tile"><div class="n ok">ran</div><div class="k"><b>Poplars</b> — hypermutation screen completed (9,527 result rows)</div></div>
+        <div class="tile"><div class="n">0 / 5</div><div class="k"><b>HIVIntact</b> — 0 intact, 5 non-intact (read with caution: subtype-B-optimised)</div></div>
+        <div class="tile"><div class="n no">setup</div><div class="k"><b>HIVSeqinR</b> — R-based Rakai standard; pending a working run (see next)</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Biological Filtering</div><div class="pagenum">8</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 4 <span class="dim">· Biological Filtering &amp; Intactness</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card">
+      <div class="p">HIVIntact failed on a <code>pkg_resources</code> import</div>
+      <div class="r">A newer setuptools removed the module it depends on. <b>Pinned <code>setuptools&lt;81</code></b> in its setup — HIVIntact then runs.</div>
+    </div>
+    <div class="card">
+      <div class="p">Poplars has no console entry point (<code>python -m poplars</code> fails)</div>
+      <div class="r"><b>Invoked <code>hypermut.py</code> directly</b> with HXB2 as the first FASTA record (its implicit reference).</div>
+    </div>
+    <div class="card">
+      <div class="p">HIVIntact's heuristics are optimised for subtype B — bias risk on A1/D</div>
+      <div class="r">Its intact/defective calls can be skewed for this cohort. <b>Flagged as interpret-with-caution</b>; HIVSeqinR (explicitly Rakai A1/D-validated) is the primary classifier once its run is finalised.</div>
+    </div>
+  </div>
+  <div class="foot">Biological Filtering</div><div class="pagenum">9</div>
+</section>
+
+<!-- ==================== STEP 5 — SUBTYPING ==================== -->
+<section class="slide">
+  <div class="kicker">Step 5 <span class="dim">· Subtype &amp; Recombination Detection</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols wide-left">
+    <div>
+      <div class="chips">
+        <span class="chip win">jpHMM</span><span class="chip">IQ-TREE 2</span>
+        <span class="chip" style="opacity:.6">COMET / REGA — web-only, excluded</span>
+      </div>
+      <h2 class="sub">What was done</h2>
+      <ul>
+        <li><b>jpHMM</b> calls per-sample recombination breakpoints (bundled HIV reference alignment + priors); <b>IQ-TREE 2</b> confirms clustering with an ML tree.</li>
+        <li>IQ-TREE run with <b>-m MFP</b> (ModelFinder auto-selects the substitution model).</li>
+        <li>Bootstrap <b>-B 1000 dropped for the small subset</b>. <span class="why">IQ-TREE refuses ultrafast bootstrap with too few distinct sequences; re-added for the full cohort.</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Runtime per tool</div>
+        <div class="cs">jpHMM runs per sample (~10 min each); IQ-TREE builds one tree</div>
+        <div class="row"><div class="lab">jpHMM</div><div class="track"><div class="bar" style="--v:100%;--c:var(--s1)"></div></div><div class="val">~627 s</div></div>
+        <div class="row"><div class="lab">IQ-TREE 2</div><div class="track"><div class="bar" style="--v:1%;--c:var(--s2)"></div></div><div class="val">1 s</div></div>
+        <div class="band-note">jpHMM is the heavy step (breakpoint HMM, run 4× — once per sample); IQ-TREE's ML tree over 5 aligned sequences is near-instant.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Subtyping</div><div class="pagenum">10</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 5 <span class="dim">· Subtype &amp; Recombination Detection</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card">
+      <div class="p">jpHMM aborted on a shared-library version conflict</div>
+      <div class="r">An inherited <code>LD_LIBRARY_PATH</code> shadowed a required GLIBCXX version. <b>Fixed the library path</b> in its wrapper so jpHMM loads the correct runtime.</div>
+    </div>
+    <div class="card">
+      <div class="p">IQ-TREE 2 refused ultrafast bootstrap on the small subset</div>
+      <div class="r">Too few effectively-distinct sequences for UFBoot. <b>Dropped <code>-B 1000</code> for the comparison run</b>; it is re-enabled for the full-cohort tree where bootstrap support is meaningful.</div>
+    </div>
+    <div class="card">
+      <div class="p">Binary-name drift: <code>iqtree2</code> vs <code>iqtree3</code></div>
+      <div class="r">The unpinned package resolves to IQ-TREE 3 (different binary name). <b>Pinned <code>iqtree=2.*</code></b> to match the review's cited version and the <code>iqtree2</code> call.</div>
+    </div>
+  </div>
+  <div class="foot">Subtyping</div><div class="pagenum">11</div>
+</section>
+
+<!-- ==================== STEP 6 — MOTIF MAPPING ==================== -->
+<section class="slide">
+  <div class="kicker">Step 6 <span class="dim">· U3 Extraction &amp; Motif Mapping</span></div>
+  <h1 class="title">Tools, configuration &amp; results</h1>
+  <div class="rule"></div>
+  <div class="cols">
+    <div>
+      <div class="chips">
+        <span class="chip">SeqKit (U3)</span><span class="chip">FIMO</span><span class="chip">MOODS</span>
+        <span class="chip">TFBSTools</span><span class="chip">gquad</span><span class="chip">pqsfinder</span>
+      </div>
+      <h2 class="sub">What was done</h2>
+      <ul>
+        <li>Extracted <b>U3 (453&nbsp;bp, 5 seqs)</b> from the MAFFT alignment, anchored to HXB2's own annotated LTR coordinates.</li>
+        <li>TFBS scanners (FIMO / MOODS / TFBSTools) use <b>JASPAR 2024 PWMs</b> for 6 TFs (NF-κB p65/p50, SP1, NFAT, AP-1, TBP); FIMO threshold <b>1e-4</b>.</li>
+        <li>G-quadruplex (gquad / pqsfinder) use <b>sequence G-tract rules</b> — no PWM database.</li>
+        <li>Each tool runs a <b>positive control</b> on HXB2's own U3 first.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart">
+        <div class="ct">Motif hits — subset (control)</div>
+        <div class="cs">hits across the 4-sample U3 set; (n) = HXB2 positive control</div>
+        <div class="row"><div class="lab">FIMO</div><div class="track"><div class="bar" style="--v:23%;--c:var(--s1)"></div></div><div class="val">16 (4)</div></div>
+        <div class="row"><div class="lab">MOODS</div><div class="track"><div class="bar" style="--v:14%;--c:var(--s1)"></div></div><div class="val">10 (2)</div></div>
+        <div class="row"><div class="lab">TFBSTools</div><div class="track"><div class="bar" style="--v:100%;--c:var(--s1)"></div></div><div class="val">70 (14)</div></div>
+        <div class="row"><div class="lab">gquad</div><div class="track"><div class="bar" style="--v:21%;--c:var(--s2)"></div></div><div class="val">15 (3)</div></div>
+        <div class="row"><div class="lab">pqsfinder</div><div class="track"><div class="bar" style="--v:7%;--c:var(--s2)"></div></div><div class="val">5 (1)</div></div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--s1)"></i>TFBS (PWM)</span>
+          <span><i class="dot" style="background:var(--s2)"></i>G-quadruplex</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">U3 Extraction &amp; Motif Mapping</div><div class="pagenum">12</div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Step 6 <span class="dim">· U3 Extraction &amp; Motif Mapping</span></div>
+  <h1 class="title">Challenges &amp; resolutions</h1>
+  <div class="rule"></div>
+  <div class="cards">
+    <div class="card">
+      <div class="p">A shared logging helper swallowed every tool's stderr into the timing file</div>
+      <div class="r">Real errors were hidden and metrics read as “0 / n/a”. <b>Fixed <code>lib_compare.sh</code></b> to time via <code>date</code> without redirecting the wrapped tool's stderr — errors now land in the right log.</div>
+    </div>
+    <div class="card">
+      <div class="p">A <code>REPO_ROOT</code> off-by-one broke 7 run-scripts; lowercase U3 gave 0 hits</div>
+      <div class="r"><b>Fixed the path resolution</b> across all scripts, and <b>uppercased the extracted U3</b> so FIMO/MOODS/TFBSTools no longer treat MAFFT's lowercase as masked.</div>
+    </div>
+    <div class="card">
+      <div class="p">JASPAR PWM sourcing &amp; per-tool format quirks</div>
+      <div class="r"><b>Fetched JASPAR 2024 via its REST API</b> (version-locked, reproducible); split matrices per-file for MOODS; corrected a <code>seqkit grep -n</code> pitfall that had matched nothing.</div>
+    </div>
+  </div>
+  <div class="foot">U3 Extraction &amp; Motif Mapping</div><div class="pagenum">13</div>
+</section>
+
+</div>
+</body>
+</html>
