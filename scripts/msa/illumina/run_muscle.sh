@@ -3,6 +3,6 @@
 # bioconda build crashes with SIGILL on this node's CPU). v3's CLI is
 # -in/-out, single-threaded (no -threads flag), unlike v5's -align/-output.
 # Usage: run_muscle.sh <COMBINED_FASTA> <OUT_FASTA> <LOG>
-set -uo pipefail
-IN="$1" OUT="$2" LOG="$3"
-muscle -in "${IN}" -out "${OUT}" > "${LOG}" 2>&1
+set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
+IN="$1" OUT="$2" LOG="$3"                            # positional args: input FASTA, output alignment, log file
+muscle -in "${IN}" -out "${OUT}" > "${LOG}" 2>&1     # run MUSCLE 3.8 with its -in/-out CLI; redirect stdout+stderr to the log

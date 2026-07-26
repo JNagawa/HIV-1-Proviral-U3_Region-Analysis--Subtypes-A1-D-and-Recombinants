@@ -11,77 +11,77 @@
 # cd's into OUTDIR before calling them.
 #
 # Usage: run_shiver.sh <SRR> <R1.fastq.gz> <R2.fastq.gz> <OUTDIR>
-set -uo pipefail
-SRR="$1" R1="$2" R2="$3" OUTDIR="$4"
+set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
+SRR="$1" R1="$2" R2="$3" OUTDIR="$4"                 # positional args: sample id, paired reads, output dir
 
-STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
-SETUP_DIR="${STAGE_DIR}/shiver_setup"
-REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
-SHIVER_BIN="${REPO_ROOT}/scripts/tools/shiver/bin"
+STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"           # absolute path of this script's own dir, so paths work regardless of launch location
+SETUP_DIR="${STAGE_DIR}/shiver_setup"                # dir holding SHIVER's config.sh and reference alignment
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"     # repo top-level (three dirs up), the base for tool paths below
+SHIVER_BIN="${REPO_ROOT}/scripts/tools/shiver/bin"   # dir with the SHIVER executable scripts
 
-REF_ALIGNMENT="${SETUP_DIR}/HIV1_COM_ref_alignment.fasta"
-if [ ! -s "${REF_ALIGNMENT}" ]; then
+REF_ALIGNMENT="${SETUP_DIR}/HIV1_COM_ref_alignment.fasta"  # LANL multi-subtype reference alignment panel
+if [ ! -s "${REF_ALIGNMENT}" ]; then                 # the panel is a manual one-time download, so verify it exists
     echo "ERROR: ${REF_ALIGNMENT} not found. See shiver_setup/SOURCE.md for" \
-         "the one-time manual LANL download step this requires." >&2
-    exit 1
+         "the one-time manual LANL download step this requires." >&2  # tell the user how to obtain it
+    exit 1                                           # cannot proceed without the reference panel
 fi
 
-ADAPTERS="${REPO_ROOT}/scripts/tools/shiver/data/example_input/adapters_Illumina.fasta"
-PRIMERS="${REPO_ROOT}/scripts/tools/shiver/data/example_input/primers_GallEtAl2012.fasta"
-INIT_DIR="${OUTDIR}/shiver_init"
-mkdir -p "${OUTDIR}"
+ADAPTERS="${REPO_ROOT}/scripts/tools/shiver/data/example_input/adapters_Illumina.fasta"  # adapter sequences SHIVER trims from reads
+PRIMERS="${REPO_ROOT}/scripts/tools/shiver/data/example_input/primers_GallEtAl2012.fasta"  # PCR primer sequences SHIVER trims from reads
+INIT_DIR="${OUTDIR}/shiver_init"                     # dir for SHIVER's one-time init output
+mkdir -p "${OUTDIR}"                                 # ensure the output dir exists
 
 # Resolve R1/R2 to absolute paths before we cd, since callers may pass
 # relative paths.
-R1="$(cd "$(dirname "${R1}")" && pwd)/$(basename "${R1}")"
-R2="$(cd "$(dirname "${R2}")" && pwd)/$(basename "${R2}")"
+R1="$(cd "$(dirname "${R1}")" && pwd)/$(basename "${R1}")"  # canonicalize R1 to an absolute path (survives the later cd)
+R2="$(cd "$(dirname "${R2}")" && pwd)/$(basename "${R2}")"  # canonicalize R2 to an absolute path (survives the later cd)
 
 # shiver_init.sh only needs to run once (its OutDir must not pre-exist)
-if [ ! -d "${INIT_DIR}" ]; then
+if [ ! -d "${INIT_DIR}" ]; then                      # only initialise if it hasn't been done yet (dir must not pre-exist)
     "${SHIVER_BIN}/shiver_init.sh" "${INIT_DIR}" "${SETUP_DIR}/config.sh" \
         "${REF_ALIGNMENT}" "${ADAPTERS}" "${PRIMERS}" \
-        > "${OUTDIR}/shiver_init.log" 2>&1
-    if [ $? -ne 0 ]; then
-        echo "ERROR: shiver_init.sh failed, see ${OUTDIR}/shiver_init.log" >&2
-        exit 1
+        > "${OUTDIR}/shiver_init.log" 2>&1            # build SHIVER's initialisation dir from the reference/adapters/primers
+    if [ $? -ne 0 ]; then                            # if init failed...
+        echo "ERROR: shiver_init.sh failed, see ${OUTDIR}/shiver_init.log" >&2  # ...point at the log...
+        exit 1                                       # ...and abort
     fi
 fi
 
-cd "${OUTDIR}" || exit 1
+cd "${OUTDIR}" || exit 1                             # SHIVER writes to cwd, so enter this sample's output dir
 
 # Step 1 of the chain: assemble contigs with SPAdes (cost logged separately).
-CONTIGS_DIR="${SRR}_spades_for_shiver"
+CONTIGS_DIR="${SRR}_spades_for_shiver"               # separate SPAdes dir so its cost is logged apart from SHIVER's
 spades.py --careful -1 "${R1}" -2 "${R2}" -o "${CONTIGS_DIR}" -t "${THREADS:-4}" \
-    > "${SRR}_spades_for_shiver.log" 2>&1
-CONTIGS="${CONTIGS_DIR}/contigs.fasta"
-[ -s "${CONTIGS}" ] || { echo "ERROR: SPAdes (for SHIVER) produced no contigs for ${SRR}" >&2; exit 1; }
+    > "${SRR}_spades_for_shiver.log" 2>&1            # assemble contigs to feed into SHIVER
+CONTIGS="${CONTIGS_DIR}/contigs.fasta"               # the contigs SPAdes produced
+[ -s "${CONTIGS}" ] || { echo "ERROR: SPAdes (for SHIVER) produced no contigs for ${SRR}" >&2; exit 1; }  # abort if no contigs
 
 # Step 2: align contigs to the reference set, excluding contamination.
 "${SHIVER_BIN}/shiver_align_contigs.sh" "${INIT_DIR}" "${SETUP_DIR}/config.sh" \
-    "${CONTIGS}" "${SRR}" > "${SRR}_align_contigs.log" 2>&1
-if [ $? -ne 0 ]; then
-    echo "ERROR: shiver_align_contigs.sh failed, see ${OUTDIR}/${SRR}_align_contigs.log" >&2
-    exit 1
+    "${CONTIGS}" "${SRR}" > "${SRR}_align_contigs.log" 2>&1  # clean/align contigs to the reference panel
+if [ $? -ne 0 ]; then                                # if alignment failed...
+    echo "ERROR: shiver_align_contigs.sh failed, see ${OUTDIR}/${SRR}_align_contigs.log" >&2  # ...point at the log...
+    exit 1                                           # ...and abort
 fi
-BLAST_FILE="${SRR}.blast"
-CUT_WREFS="${SRR}_cut_wRefs.fasta"
-[ -s "${BLAST_FILE}" ] || { echo "ERROR: no blast hits for ${SRR} -- contigs may not be HIV" >&2; exit 1; }
+BLAST_FILE="${SRR}.blast"                            # blast-hits output from the align step
+CUT_WREFS="${SRR}_cut_wRefs.fasta"                   # cleaned contigs + references output from the align step
+[ -s "${BLAST_FILE}" ] || { echo "ERROR: no blast hits for ${SRR} -- contigs may not be HIV" >&2; exit 1; }  # no hits means contigs aren't HIV
 
 # Step 3: map reads using the aligned contigs to build the final assembly.
 "${SHIVER_BIN}/shiver_map_reads.sh" "${INIT_DIR}" "${SETUP_DIR}/config.sh" \
     "${CONTIGS}" "${SRR}" "${BLAST_FILE}" "${CUT_WREFS}" "${R1}" "${R2}" \
-    > "${SRR}_map_reads.log" 2>&1
-if [ $? -ne 0 ]; then
-    echo "ERROR: shiver_map_reads.sh failed, see ${OUTDIR}/${SRR}_map_reads.log" >&2
-    exit 1
+    > "${SRR}_map_reads.log" 2>&1                    # map reads to the sample-specific reference to build the consensus
+if [ $? -ne 0 ]; then                                # if mapping failed...
+    echo "ERROR: shiver_map_reads.sh failed, see ${OUTDIR}/${SRR}_map_reads.log" >&2  # ...point at the log...
+    exit 1                                           # ...and abort
 fi
 
 # SHIVER names its consensus output "<SID>_remap_consensus_MinCov_*.fasta";
 # take the first (default coverage threshold) match.
-CONSENSUS_SRC=$(compgen -G "${SRR}_remap_consensus_MinCov_*.fasta" | head -1)
-if [ -z "${CONSENSUS_SRC}" ] || [ ! -s "${CONSENSUS_SRC}" ]; then
-    echo "ERROR: SHIVER did not produce a consensus FASTA for ${SRR}" >&2
-    exit 1
+CONSENSUS_SRC=$(compgen -G "${SRR}_remap_consensus_MinCov_*.fasta" | head -1)  # glob for SHIVER's consensus output, take the first match
+if [ -z "${CONSENSUS_SRC}" ] || [ ! -s "${CONSENSUS_SRC}" ]; then  # if no usable consensus was produced...
+    echo "ERROR: SHIVER did not produce a consensus FASTA for ${SRR}" >&2  # ...report it...
+    exit 1                                           # ...and abort
 fi
-cp "${CONSENSUS_SRC}" "${SRR}_consensus.fasta"
-sed -i "1s/.*/>${SRR}/" "${SRR}_consensus.fasta"
+cp "${CONSENSUS_SRC}" "${SRR}_consensus.fasta"       # copy to the standard consensus name the harness expects
+sed -i "1s/.*/>${SRR}/" "${SRR}_consensus.fasta"     # rename the FASTA header to the sample id

@@ -17,72 +17,72 @@
 # in the methods write-up, not a transparent equivalent to the true sequence.
 #
 # Usage: run_hivseqinr.sh <INPUT_FASTA> <OUTDIR>
-set -uo pipefail
-IN="$1" OUTDIR="$2"
+set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
+IN="$1" OUTDIR="$2"                                  # positional args: input FASTA and where to copy results
 
-STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
-HIVSEQINR_DIR="${REPO_ROOT}/scripts/tools/HIVSeqinR"
-CONFIGURED_MARKER="${HIVSEQINR_DIR}/.CONFIGURED"
+STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"           # absolute path of this script's own dir
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"     # repo top-level (three dirs up)
+HIVSEQINR_DIR="${REPO_ROOT}/scripts/tools/HIVSeqinR" # the cloned HIVSeqinR repo (where the R script runs from)
+CONFIGURED_MARKER="${HIVSEQINR_DIR}/.CONFIGURED"     # marker file the user creates to attest they've edited the hardcoded config
 
-if [ ! -f "${CONFIGURED_MARKER}" ]; then
-    echo "ERROR: ${HIVSEQINR_DIR} has not been configured yet." >&2
-    echo "Open R_HIVSeqinR_Combined_ver*.R in RStudio, set MyBlastnDir and" >&2
-    echo "the 2nd-round PCR primer sequences for your protocol, then run:" >&2
-    echo "  touch ${CONFIGURED_MARKER}" >&2
-    echo "to confirm you've done this before rerunning." >&2
-    exit 1
+if [ ! -f "${CONFIGURED_MARKER}" ]; then             # refuse to run until the user has confirmed manual configuration
+    echo "ERROR: ${HIVSEQINR_DIR} has not been configured yet." >&2  # explain the problem
+    echo "Open R_HIVSeqinR_Combined_ver*.R in RStudio, set MyBlastnDir and" >&2  # ...
+    echo "the 2nd-round PCR primer sequences for your protocol, then run:" >&2   # ...tell them exactly what to edit...
+    echo "  touch ${CONFIGURED_MARKER}" >&2           # ...and how to create the marker
+    echo "to confirm you've done this before rerunning." >&2  # final instruction
+    exit 1                                           # bail; tool not configured
 fi
 
-mkdir -p "${OUTDIR}"
-RAW_FASTA_DIR="${HIVSEQINR_DIR}/RAW_FASTA"
-mkdir -p "${RAW_FASTA_DIR}"
-rm -f "${RAW_FASTA_DIR}"/*.seq
+mkdir -p "${OUTDIR}"                                 # ensure the output dir exists
+RAW_FASTA_DIR="${HIVSEQINR_DIR}/RAW_FASTA"           # HIVSeqinR reads one .seq file per sequence from this fixed input dir
+mkdir -p "${RAW_FASTA_DIR}"                          # create it if needed
+rm -f "${RAW_FASTA_DIR}"/*.seq                       # clear any .seq files from a previous run so results aren't mixed
 
 # Split into one file per record (id sanitized, sequence unwrapped), then
 # resolve IUPAC ambiguity codes to a single concrete base (arbitrary,
 # alphabetically-first choice per code -- R/Y/S/W/K/M/B/D/H/V/N below).
 # Non-ambiguous bases (A/C/G/T, either case) pass through untouched.
-awk -v outdir="${RAW_FASTA_DIR}" '
-function flush(   safe_id, outfile) {
-    if (id == "") return
-    safe_id = id
-    gsub(/-/, "_", safe_id)
-    gsub(/\*/, "_", safe_id)
-    outfile = outdir "/" safe_id ".seq"
-    print ">" safe_id > outfile
-    print seq > outfile
-    close(outfile)
+awk -v outdir="${RAW_FASTA_DIR}" '                   # split the multi-FASTA into per-record .seq files (outdir passed in)
+function flush(   safe_id, outfile) {                # write the currently-buffered record to its own file
+    if (id == "") return                             # nothing buffered yet, skip
+    safe_id = id                                     # copy id so we can sanitize it for use as a filename
+    gsub(/-/, "_", safe_id)                          # replace dashes with underscores (safe filenames)
+    gsub(/\*/, "_", safe_id)                         # replace asterisks with underscores too
+    outfile = outdir "/" safe_id ".seq"              # per-record output path
+    print ">" safe_id > outfile                      # write the sanitized FASTA header
+    print seq > outfile                              # write the unwrapped sequence on one line
+    close(outfile)                                   # close so we do not hit the open-file-descriptor limit
 }
-/^>/ {
-    flush()
-    header = substr($0, 2)
-    split(header, tok, /[ \t]/)
-    id = tok[1]
-    seq = ""
-    next
+/^>/ {                                               # on each FASTA header line...
+    flush()                                          # ...write out the previous record first
+    header = substr($0, 2)                           # strip the leading ">"
+    split(header, tok, /[ \t]/)                      # split on whitespace to isolate the id from any description
+    id = tok[1]                                      # use the first token as the record id
+    seq = ""                                         # reset the sequence buffer for this record
+    next                                             # done with the header line
 }
-{ seq = seq $0 }
-END { flush() }
+{ seq = seq $0 }                                     # accumulate (unwrap) sequence lines into the buffer
+END { flush() }                                      # flush the final buffered record at end of input
 ' "${IN}"
 
-for f in "${RAW_FASTA_DIR}"/*.seq; do
-    [ -e "${f}" ] || continue
-    HEADER=$(head -1 "${f}")
-    SEQ=$(tail -n +2 "${f}" | tr 'RYSWKMBDHVNryswkmbdhvn' 'ACCAGACAAAAACCAGACAAAA')
-    printf '%s\n%s\n' "${HEADER}" "${SEQ}" > "${f}"
+for f in "${RAW_FASTA_DIR}"/*.seq; do                # process each per-record file to strip IUPAC ambiguity codes
+    [ -e "${f}" ] || continue                        # skip if the glob matched nothing (no .seq files)
+    HEADER=$(head -1 "${f}")                          # keep the header line as-is
+    SEQ=$(tail -n +2 "${f}" | tr 'RYSWKMBDHVNryswkmbdhvn' 'ACCAGACAAAAACCAGACAAAA')  # map each ambiguity code to its alphabetically-first base
+    printf '%s\n%s\n' "${HEADER}" "${SEQ}" > "${f}"  # rewrite the file with the resolved sequence
 done
 
-cd "${HIVSEQINR_DIR}" || exit 1
-RSCRIPT_FILE=$(compgen -G "R_HIVSeqinR_Combined_ver*.R" | head -1)
-[ -n "${RSCRIPT_FILE}" ] || { echo "ERROR: could not find R_HIVSeqinR_Combined_ver*.R" >&2; exit 1; }
+cd "${HIVSEQINR_DIR}" || exit 1                       # the R script uses relative paths, so run from the repo dir
+RSCRIPT_FILE=$(compgen -G "R_HIVSeqinR_Combined_ver*.R" | head -1)  # find the versioned main R script (version number varies)
+[ -n "${RSCRIPT_FILE}" ] || { echo "ERROR: could not find R_HIVSeqinR_Combined_ver*.R" >&2; exit 1; }  # bail if the script is missing
 
-Rscript "${RSCRIPT_FILE}" > "${OUTDIR}/hivseqinr.log" 2>&1
+Rscript "${RSCRIPT_FILE}" > "${OUTDIR}/hivseqinr.log" 2>&1  # run the R pipeline headlessly, capturing all output to the log
 
-RESULT_CSV="${HIVSEQINR_DIR}/Results_Final/Output_MyBigSummary_DF_FINAL.csv"
-if [ -s "${RESULT_CSV}" ]; then
-    cp "${RESULT_CSV}" "${OUTDIR}/"
+RESULT_CSV="${HIVSEQINR_DIR}/Results_Final/Output_MyBigSummary_DF_FINAL.csv"  # where HIVSeqinR writes its final summary
+if [ -s "${RESULT_CSV}" ]; then                       # if the run produced a non-empty summary...
+    cp "${RESULT_CSV}" "${OUTDIR}/"                   # ...copy it into our per-run output dir
 else
-    echo "ERROR: HIVSeqinR did not produce ${RESULT_CSV}, see ${OUTDIR}/hivseqinr.log" >&2
-    exit 1
+    echo "ERROR: HIVSeqinR did not produce ${RESULT_CSV}, see ${OUTDIR}/hivseqinr.log" >&2  # otherwise report failure and point at the log
+    exit 1                                           # signal failure to the caller
 fi

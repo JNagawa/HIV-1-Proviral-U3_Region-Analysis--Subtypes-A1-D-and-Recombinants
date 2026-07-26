@@ -19,18 +19,18 @@
 #   <OUTDIR>/<SAMPLE_NAME>_1.kraken_filtered.fastq.gz
 #   <OUTDIR>/<SAMPLE_NAME>_2.kraken_filtered.fastq.gz
 #   <OUTDIR>/<SAMPLE_NAME>.kreport   (Kraken2's own hierarchical report)
-set -uo pipefail
-R1="$1" R2="$2" OUTDIR="$3" SAMPLE="$4" KRAKEN2_DB="$5"
+set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
+R1="$1" R2="$2" OUTDIR="$3" SAMPLE="$4" KRAKEN2_DB="$5"  # positional args: R1/R2 inputs, output dir, sample name, Kraken2 DB dir
 
-NODES_DMP="${KRAKEN2_DB}/nodes.dmp"
-[ -s "${NODES_DMP}" ] || { echo "ERROR: ${NODES_DMP} not found -- is KRAKEN2_DB (${KRAKEN2_DB}) an extracted Kraken2 database?" >&2; exit 1; }
+NODES_DMP="${KRAKEN2_DB}/nodes.dmp"                   # taxonomy tree bundled with the DB, used for the ancestor walk
+[ -s "${NODES_DMP}" ] || { echo "ERROR: ${NODES_DMP} not found -- is KRAKEN2_DB (${KRAKEN2_DB}) an extracted Kraken2 database?" >&2; exit 1; }  # bail if the DB isn't a real extracted Kraken2 database
 
-mkdir -p "${OUTDIR}"
+mkdir -p "${OUTDIR}"                                  # ensure the output dir exists
 
 kraken2 --db "${KRAKEN2_DB}" --paired --gzip-compressed --threads "${THREADS:-4}" \
     --output "${OUTDIR}/${SAMPLE}.kraken" \
     --report "${OUTDIR}/${SAMPLE}.kreport" \
-    "${R1}" "${R2}"
+    "${R1}" "${R2}"                                   # classify read pairs against the DB; per-pair output + hierarchical report
 
 # nodes.dmp fields are separated by "\t|\t" (taxid | parent_taxid | rank | ...);
 # Kraken2's own --output is plain-tab-separated (C/U, read_id, taxid,
@@ -46,30 +46,30 @@ kraken2 --db "${KRAKEN2_DB}" --paired --gzip-compressed --threads "${THREADS:-4}
 # parent[], so the walk stops immediately and they're kept, same as any
 # non-human/non-bacterial classified read (e.g. Viruses, Archaea).
 awk '
-    NR==FNR {
-        split($0, f, "\t\\|\t")
-        parent[f[1]] = f[2]
+    NR==FNR {                                         # first file = nodes.dmp: build the taxid->parent map
+        split($0, f, "\t\\|\t")                       # nodes.dmp fields are separated by "\t|\t"
+        parent[f[1]] = f[2]                           # parent[taxid] = parent_taxid
         next
     }
     {
-        split($0, f, "\t")
-        read_id = f[2]
-        t = f[3]
-        keep = 1
-        depth = 0
-        while (t != "1" && t != "" && depth < 50) {
-            if (t == "9606" || t == "2") { keep = 0; break }
-            if (!(t in parent)) break
-            t = parent[t]
-            depth++
+        split($0, f, "\t")                            # second file = kraken output, plain-tab separated
+        read_id = f[2]                                # field 2 = read id
+        t = f[3]                                      # field 3 = assigned taxid
+        keep = 1                                       # keep unless we hit human/bacteria
+        depth = 0                                      # loop guard against cycles/broken trees
+        while (t != "1" && t != "" && depth < 50) {   # climb ancestors until root (1) or missing
+            if (t == "9606" || t == "2") { keep = 0; break }  # descends from Homo sapiens (9606) or Bacteria (2) -> drop
+            if (!(t in parent)) break                 # no parent (e.g. unclassified taxid 0) -> stop, keep
+            t = parent[t]                             # step up to the parent taxid
+            depth++                                   # count the step
         }
-        if (keep) print read_id
+        if (keep) print read_id                       # emit ids of pairs to retain
     }
-' "${NODES_DMP}" "${OUTDIR}/${SAMPLE}.kraken" > "${OUTDIR}/${SAMPLE}.keep_read_ids.txt"
+' "${NODES_DMP}" "${OUTDIR}/${SAMPLE}.kraken" > "${OUTDIR}/${SAMPLE}.keep_read_ids.txt"  # write the keep-list of read ids
 
-N_TOTAL=$(wc -l < "${OUTDIR}/${SAMPLE}.kraken")
-N_KEEP=$(wc -l < "${OUTDIR}/${SAMPLE}.keep_read_ids.txt")
-echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} read pairs retained (human/bacterial reads discarded)." >&2
+N_TOTAL=$(wc -l < "${OUTDIR}/${SAMPLE}.kraken")              # total classified read pairs
+N_KEEP=$(wc -l < "${OUTDIR}/${SAMPLE}.keep_read_ids.txt")   # pairs kept after host/bacterial removal
+echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} read pairs retained (human/bacterial reads discarded)." >&2  # progress summary to stderr
 
 # No -n/--by-name here: seqkit's default match target is the ID (text
 # before the first space), which is exactly what keep_read_ids.txt
@@ -77,5 +77,5 @@ echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} read pairs retained 
 # exact whole-string match per seqkit's own docs, not substring), which
 # silently matched nothing against these bare IDs and was a real bug
 # caught during testing (0-byte output despite a correct ID list).
-seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R1}" -o "${OUTDIR}/${SAMPLE}_1.kraken_filtered.fastq.gz"
-seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R2}" -o "${OUTDIR}/${SAMPLE}_2.kraken_filtered.fastq.gz"
+seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R1}" -o "${OUTDIR}/${SAMPLE}_1.kraken_filtered.fastq.gz"  # subset R1 to the kept ids (same id list keeps pairs in sync)
+seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R2}" -o "${OUTDIR}/${SAMPLE}_2.kraken_filtered.fastq.gz"  # subset R2 to the same kept ids

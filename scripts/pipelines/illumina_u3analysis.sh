@@ -34,28 +34,28 @@ set -o pipefail
 # 1.    Nagawa Jovita              2500726007           2025/HD07/26007
 
 # Activate conda environment
-CONDA_SH="$HOME/miniconda3/etc/profile.d/conda.sh"
-if [ -f "$CONDA_SH" ]; then
-    source "$CONDA_SH"
-elif command -v conda >/dev/null 2>&1; then
-    source "$(conda info --base)/etc/profile.d/conda.sh"
+CONDA_SH="$HOME/miniconda3/etc/profile.d/conda.sh"   # usual miniconda hook location
+if [ -f "$CONDA_SH" ]; then                          # if that hook exists...
+    source "$CONDA_SH"                               # ...source it directly
+elif command -v conda >/dev/null 2>&1; then          # else if conda is already on PATH...
+    source "$(conda info --base)/etc/profile.d/conda.sh"  # ...source the hook from its reported base
 else
-    echo "ERROR: Conda not found. Please load conda before running this script." >&2
-    exit 1
+    echo "ERROR: Conda not found. Please load conda before running this script." >&2  # neither worked: fail loudly
+    exit 1                                           # abort rather than run without the tools
 fi
-conda activate HIV_U3analysis
+conda activate HIV_U3analysis                        # activate the env holding all pipeline tools
 
 ##==========================================================================##
 ##                     CONFIGURATION & VARIABLES                             ##
 ##==========================================================================##
 
-BIOPROJECT="PRJNA207834"
+BIOPROJECT="PRJNA207834"                             # SRA BioProject this pipeline processes
 THREADS=${SLURM_CPUS_PER_TASK:-8}    # Use SLURM allocation or default to 8
 
 # SRA accessions for BioProject PRJNA207834
 # 24 HIV-1 near-full-genome Illumina MiSeq paired-end samples from Uganda
 # Subtypes: A1, D, and A1-D intersubtype recombinants (BSRI)
-SRR_ACCESSIONS=(
+SRR_ACCESSIONS=(                                     # the 24 samples processed end-to-end
     SRR908430    # AS03-00205
     SRR908431    # AS03-05969
     SRR908432    # AS04-01159
@@ -90,55 +90,55 @@ TRIM_MINLEN=50          # Minimum read length after trimming
 TRIM_AVGQUAL=15         # Minimum average quality of the read
 
 # Directory structure
-BASE_DIR="$(pwd)"
-RAW_DIR="${BASE_DIR}/data/raw/illumina"
-QC_DIR="${BASE_DIR}/results/reports/qc/illumina"
-FASTQC_PRE_DIR="${QC_DIR}/fastqc_pre"
-FASTQC_POST_DIR="${QC_DIR}/fastqc_post"
-MULTIQC_DIR="${QC_DIR}/multiqc"
-TRIMMED_DIR="${BASE_DIR}/data/processed/illumina/trimmed_trimmomatic"
-DEDUP_DIR="${BASE_DIR}/data/processed/illumina/dedup_trimmomatic"
-KRAKEN2_DIR="${BASE_DIR}/data/processed/illumina/kraken2_trimmomatic"
-KRAKEN2_DB="${BASE_DIR}/data/reference/kraken2_standard_16gb_db"
-LOG_DIR="${BASE_DIR}/logs"
-ALIGN_DIR="${BASE_DIR}/data/processed/illumina/alignments"
-FILTER_DIR="${BASE_DIR}/data/processed/illumina/filtering"
-MSA_DIR="${BASE_DIR}/data/processed/illumina/msa"
-SUBTYPE_DIR="${BASE_DIR}/data/processed/illumina/subtyping"
-MOTIF_DIR="${BASE_DIR}/data/processed/illumina/motifs"
-REF_DIR="${BASE_DIR}/data/reference"
-CHECKPOINT_DIR="${BASE_DIR}/checkpoints"
+BASE_DIR="$(pwd)"                                    # repo root -- MUST be invoked from here
+RAW_DIR="${BASE_DIR}/data/raw/illumina"              # downloaded, untrimmed FASTQs
+QC_DIR="${BASE_DIR}/results/reports/qc/illumina"     # all Illumina QC output lives under here
+FASTQC_PRE_DIR="${QC_DIR}/fastqc_pre"                # FastQC on raw reads
+FASTQC_POST_DIR="${QC_DIR}/fastqc_post"              # FastQC on trimmed reads
+MULTIQC_DIR="${QC_DIR}/multiqc"                      # aggregated MultiQC report
+TRIMMED_DIR="${BASE_DIR}/data/processed/illumina/trimmed_trimmomatic"  # Trimmomatic's trimmed reads
+DEDUP_DIR="${BASE_DIR}/data/processed/illumina/dedup_trimmomatic"      # fastp --dedup-only pass on trimmed reads
+KRAKEN2_DIR="${BASE_DIR}/data/processed/illumina/kraken2_trimmomatic"  # Kraken2 host-filtered reads
+KRAKEN2_DB="${BASE_DIR}/data/reference/kraken2_standard_16gb_db"       # size-capped Standard DB (human+bacteria+archaea+viral)
+LOG_DIR="${BASE_DIR}/logs"                           # per-sample tool logs
+ALIGN_DIR="${BASE_DIR}/data/processed/illumina/alignments"  # BAMs, VCFs, and per-sample consensus FASTAs
+FILTER_DIR="${BASE_DIR}/data/processed/illumina/filtering"  # biological-filtering outputs (Step 8)
+MSA_DIR="${BASE_DIR}/data/processed/illumina/msa"    # multiple-sequence-alignment outputs (Step 9)
+SUBTYPE_DIR="${BASE_DIR}/data/processed/illumina/subtyping"  # subtyping outputs (Step 10)
+MOTIF_DIR="${BASE_DIR}/data/processed/illumina/motifs"  # U3 extraction + motif-mapping outputs (Step 11)
+REF_DIR="${BASE_DIR}/data/reference"                 # reference genome + annotation cache
+CHECKPOINT_DIR="${BASE_DIR}/checkpoints"             # resume-state markers
 
 ##==========================================================================##
 ##                         HELPER FUNCTIONS                                  ##
 ##==========================================================================##
 
 log_msg() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ILLUMINA] $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ILLUMINA] $1"  # timestamp + tag + the message argument
 }
 
 check_exit() {
-    if [ $? -ne 0 ]; then
-        log_msg "ERROR: $1"
-        exit 1
+    if [ $? -ne 0 ]; then                            # inspect the exit status of the previous command
+        log_msg "ERROR: $1"                          # log the caller-supplied failure message
+        exit 1                                       # abort the pipeline
     fi
 }
 
 # Verify a file exists and is non-empty; logs and returns 1 otherwise.
 # Used to gate checkpoint creation instead of touching it unconditionally.
 verify_nonempty() {
-    local f="$1" label="$2"
-    if [ ! -s "${f}" ]; then
-        log_msg "ERROR: ${label} produced empty/missing output: ${f}"
-        return 1
+    local f="$1" label="$2"                          # arg 1 = file to check, arg 2 = human label for the message
+    if [ ! -s "${f}" ]; then                         # if the file is missing or zero-byte...
+        log_msg "ERROR: ${label} produced empty/missing output: ${f}"  # ...report which step produced nothing...
+        return 1                                     # ...and signal failure to the caller
     fi
-    return 0
+    return 0                                          # file is non-empty: success
 }
 
 # Cheap integrity check for gzip files (catches truncated/corrupted output,
 # e.g. from a crash mid-write).
 is_valid_gz() {
-    gzip -t "$1" >/dev/null 2>&1
+    gzip -t "$1" >/dev/null 2>&1                      # test gzip integrity silently; exit status is the answer
 }
 
 # True only if the checkpoint file exists AND every output file argument is
@@ -146,49 +146,49 @@ is_valid_gz() {
 # "[ -f "$CHKPT" ]"-style resume checks so a checkpoint next to a truncated,
 # corrupted, or zero-byte output is never trusted as "done" again.
 is_step_done() {
-    local chkpt="$1"
-    shift
-    [ -f "${chkpt}" ] || return 1
-    local f
-    for f in "$@"; do
-        [ -s "${f}" ] || return 1
-        case "${f}" in
-            *.gz) is_valid_gz "${f}" || return 1 ;;
+    local chkpt="$1"                                 # arg 1 = the checkpoint marker file
+    shift                                            # remaining args are the output files to validate
+    [ -f "${chkpt}" ] || return 1                    # no checkpoint means not done
+    local f                                          # loop variable over output files
+    for f in "$@"; do                                # every declared output must exist and be intact
+        [ -s "${f}" ] || return 1                    # missing/empty output invalidates the checkpoint
+        case "${f}" in                               # for gzip outputs, also verify integrity
+            *.gz) is_valid_gz "${f}" || return 1 ;;  # a truncated .gz counts as not-done
         esac
     done
-    return 0
+    return 0                                          # checkpoint present and all outputs valid
 }
 
 # Pre-flight dependency check; exits immediately with a clear message instead
 # of letting a missing tool fail silently deep inside a pipe (this is what let
 # a missing minimap2 mark 9 Nanopore samples "done" with 0-byte output).
 require_tool() {
-    command -v "$1" >/dev/null 2>&1 || { log_msg "ERROR: required tool '$1' not found on PATH. Check conda env HIV_U3analysis."; exit 1; }
+    command -v "$1" >/dev/null 2>&1 || { log_msg "ERROR: required tool '$1' not found on PATH. Check conda env HIV_U3analysis."; exit 1; }  # abort now if the tool isn't on PATH
 }
 
 # Locate Trimmomatic adapter file
 find_adapter_file() {
     # Search common locations for Trimmomatic adapter files
-    local ADAPTER_LOCATIONS=(
+    local ADAPTER_LOCATIONS=(                        # candidate paths for the TruSeq3-PE-2.fa adapter file
         "${CONDA_PREFIX}/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
         "${CONDA_PREFIX}/share/trimmomatic-*/adapters/TruSeq3-PE-2.fa"
         "/usr/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
         "/usr/local/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
     )
 
-    for pattern in "${ADAPTER_LOCATIONS[@]}"; do
+    for pattern in "${ADAPTER_LOCATIONS[@]}"; do      # try each candidate in order
         # Use compgen to expand globs safely
-        local found
-        found=$(compgen -G "${pattern}" 2>/dev/null | head -1)
-        if [ -n "${found}" ] && [ -f "${found}" ]; then
-            echo "${found}"
-            return 0
+        local found                                  # holds the first matching path, if any
+        found=$(compgen -G "${pattern}" 2>/dev/null | head -1)  # expand the glob, take the first hit
+        if [ -n "${found}" ] && [ -f "${found}" ]; then  # if we got a real, existing file...
+            echo "${found}"                          # ...print it (the function's return value)...
+            return 0                                 # ...and report success
         fi
     done
 
-    log_msg "WARNING: TruSeq3-PE-2.fa adapter file not found. Skipping adapter trimming."
-    echo ""
-    return 1
+    log_msg "WARNING: TruSeq3-PE-2.fa adapter file not found. Skipping adapter trimming."  # none found: warn but continue
+    echo ""                                          # print empty so the caller's $() is empty
+    return 1                                          # signal not-found to the caller
 }
 
 ##==========================================================================##
@@ -198,8 +198,8 @@ find_adapter_file() {
 log_msg "========== STEP 0: Checking required tools are on PATH =========="
 
 for TOOL in prefetch vdb-validate fasterq-dump fastqc trimmomatic multiqc \
-            bwa samtools bcftools tabix mafft seqkit; do
-    require_tool "${TOOL}"
+            bwa samtools bcftools tabix mafft seqkit; do  # every executable this pipeline depends on
+    require_tool "${TOOL}"                           # abort immediately if any one is missing
 done
 
 log_msg "All required tools found."
@@ -213,7 +213,7 @@ log_msg "========== STEP 1: Setting up directory structure =========="
 mkdir -p "${RAW_DIR}" "${FASTQC_PRE_DIR}" "${FASTQC_POST_DIR}" \
          "${MULTIQC_DIR}" "${TRIMMED_DIR}" "${LOG_DIR}" \
          "${ALIGN_DIR}" "${FILTER_DIR}" "${MSA_DIR}" \
-         "${SUBTYPE_DIR}" "${MOTIF_DIR}" "${REF_DIR}" "${CHECKPOINT_DIR}"
+         "${SUBTYPE_DIR}" "${MOTIF_DIR}" "${REF_DIR}" "${CHECKPOINT_DIR}"  # create every output/log/checkpoint dir up front
 
 log_msg "Directory structure created under: ${BASE_DIR}"
 
@@ -223,15 +223,15 @@ log_msg "Directory structure created under: ${BASE_DIR}"
 
 log_msg "========== STEP 2: Downloading SRA data (${#SRR_ACCESSIONS[@]} samples) =========="
 
-for SRR in "${SRR_ACCESSIONS[@]}"; do
+for SRR in "${SRR_ACCESSIONS[@]}"; do                # download each accession in turn
     log_msg "--- Processing ${SRR} ---"
 
     # Skip if paired-end FASTQs already exist and are intact (not a truncated
     # partial download from an earlier interrupted/crashed run)
     if [ -s "${RAW_DIR}/${SRR}_1.fastq.gz" ] && [ -s "${RAW_DIR}/${SRR}_2.fastq.gz" ] && \
-       is_valid_gz "${RAW_DIR}/${SRR}_1.fastq.gz" && is_valid_gz "${RAW_DIR}/${SRR}_2.fastq.gz"; then
-        log_msg "FASTQs for ${SRR} already exist, skipping download."
-        continue
+       is_valid_gz "${RAW_DIR}/${SRR}_1.fastq.gz" && is_valid_gz "${RAW_DIR}/${SRR}_2.fastq.gz"; then  # both mates present and intact?
+        log_msg "FASTQs for ${SRR} already exist, skipping download."  # already done
+        continue                                     # skip to the next accession
     fi
 
     # Prefetch SRA file
@@ -240,17 +240,17 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
         --output-directory "${RAW_DIR}" \
         --max-size 50G \
         --progress \
-        2>&1 | tee "${LOG_DIR}/${SRR}_prefetch.log"
-    check_exit "prefetch failed for ${SRR}"
+        2>&1 | tee "${LOG_DIR}/${SRR}_prefetch.log"  # download the .sra, mirroring output to a per-sample log
+    check_exit "prefetch failed for ${SRR}"          # abort if the download failed
 
     # Validate the downloaded SRA file
     log_msg "Validating ${SRR}..."
-    vdb-validate "${RAW_DIR}/${SRR}/${SRR}.sra" 2>&1 | tee "${LOG_DIR}/${SRR}_validate.log"
-    if [ $? -ne 0 ]; then
-        log_msg "WARNING: Validation failed for ${SRR}, attempting re-download..."
-        rm -rf "${RAW_DIR}/${SRR}"
-        prefetch "${SRR}" --output-directory "${RAW_DIR}" --max-size 50G --force ALL
-        check_exit "Re-download failed for ${SRR}"
+    vdb-validate "${RAW_DIR}/${SRR}/${SRR}.sra" 2>&1 | tee "${LOG_DIR}/${SRR}_validate.log"  # integrity-check the downloaded .sra
+    if [ $? -ne 0 ]; then                            # if validation failed...
+        log_msg "WARNING: Validation failed for ${SRR}, attempting re-download..."  # ...warn...
+        rm -rf "${RAW_DIR}/${SRR}"                   # ...remove the corrupt download...
+        prefetch "${SRR}" --output-directory "${RAW_DIR}" --max-size 50G --force ALL  # ...and force a clean re-download
+        check_exit "Re-download failed for ${SRR}"   # abort if even the retry fails
     fi
 
     # Convert SRA to paired-end FASTQ
@@ -260,18 +260,18 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
         --split-3 \
         --threads "${THREADS}" \
         --progress \
-        2>&1 | tee "${LOG_DIR}/${SRR}_fasterq.log"
-    check_exit "fasterq-dump failed for ${SRR}"
+        2>&1 | tee "${LOG_DIR}/${SRR}_fasterq.log"   # extract paired FASTQs (_1/_2 + orphans) from the .sra
+    check_exit "fasterq-dump failed for ${SRR}"      # abort if conversion failed
 
     # Compress FASTQs to save space
     log_msg "Compressing FASTQs for ${SRR}..."
-    gzip -f "${RAW_DIR}/${SRR}_1.fastq" 2>/dev/null
-    gzip -f "${RAW_DIR}/${SRR}_2.fastq" 2>/dev/null
+    gzip -f "${RAW_DIR}/${SRR}_1.fastq" 2>/dev/null  # compress the forward mate
+    gzip -f "${RAW_DIR}/${SRR}_2.fastq" 2>/dev/null  # compress the reverse mate
     # Also compress unpaired reads if they exist
-    gzip -f "${RAW_DIR}/${SRR}.fastq" 2>/dev/null
+    gzip -f "${RAW_DIR}/${SRR}.fastq" 2>/dev/null    # compress orphan reads if present (silently skip if not)
 
     # Clean up SRA cache
-    rm -rf "${RAW_DIR}/${SRR}"
+    rm -rf "${RAW_DIR}/${SRR}"                        # delete the .sra cache dir to reclaim space
 
     log_msg "Completed download for ${SRR}"
 done
@@ -284,11 +284,11 @@ log_msg "All SRA downloads completed."
 
 log_msg "========== STEP 3: Running pre-trimming FastQC =========="
 
-for SRR in "${SRR_ACCESSIONS[@]}"; do
-    R1="${RAW_DIR}/${SRR}_1.fastq.gz"
-    R2="${RAW_DIR}/${SRR}_2.fastq.gz"
+for SRR in "${SRR_ACCESSIONS[@]}"; do                # QC each sample's raw reads
+    R1="${RAW_DIR}/${SRR}_1.fastq.gz"                # forward-mate raw FASTQ
+    R2="${RAW_DIR}/${SRR}_2.fastq.gz"                # reverse-mate raw FASTQ
 
-    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then
+    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then  # skip missing/corrupt input
         log_msg "WARNING: Paired FASTQs not found or corrupted for ${SRR}, skipping pre-QC."
         continue
     fi
@@ -299,8 +299,8 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
         --outdir "${FASTQC_PRE_DIR}" \
         --threads "${THREADS}" \
         --quiet \
-        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_pre.log"
-    check_exit "FastQC (pre-trimming) failed for ${SRR}"
+        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_pre.log"  # QC both raw mates, logging to a per-sample file
+    check_exit "FastQC (pre-trimming) failed for ${SRR}"  # abort on FastQC failure
 
     log_msg "Pre-trimming FastQC completed for ${SRR}"
 done
@@ -312,19 +312,19 @@ done
 log_msg "========== STEP 4: Trimming reads with Trimmomatic =========="
 
 # Find adapter file
-ADAPTER_FILE=$(find_adapter_file)
+ADAPTER_FILE=$(find_adapter_file)                    # resolve the TruSeq3 adapter path once for all samples
 
-for SRR in "${SRR_ACCESSIONS[@]}"; do
-    R1="${RAW_DIR}/${SRR}_1.fastq.gz"
-    R2="${RAW_DIR}/${SRR}_2.fastq.gz"
+for SRR in "${SRR_ACCESSIONS[@]}"; do                # trim each sample with Trimmomatic
+    R1="${RAW_DIR}/${SRR}_1.fastq.gz"                # forward-mate raw FASTQ
+    R2="${RAW_DIR}/${SRR}_2.fastq.gz"                # reverse-mate raw FASTQ
 
     # Output files
-    R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"
-    R1_UNPAIRED="${TRIMMED_DIR}/${SRR}_1_unpaired.fastq.gz"
-    R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"
-    R2_UNPAIRED="${TRIMMED_DIR}/${SRR}_2_unpaired.fastq.gz"
+    R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"    # forward reads whose mate also survived
+    R1_UNPAIRED="${TRIMMED_DIR}/${SRR}_1_unpaired.fastq.gz"  # forward reads whose mate was dropped
+    R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"    # reverse reads whose mate also survived
+    R2_UNPAIRED="${TRIMMED_DIR}/${SRR}_2_unpaired.fastq.gz"  # reverse reads whose mate was dropped
 
-    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then
+    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then  # skip missing/corrupt input
         log_msg "WARNING: Paired FASTQs not found or corrupted for ${SRR}, skipping trimming."
         continue
     fi
@@ -332,7 +332,7 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
     # Skip if trimmed files already exist and are intact (a truncated gzip
     # from an earlier crashed Trimmomatic run must NOT be trusted as "done")
     if [ -s "${R1_PAIRED}" ] && [ -s "${R2_PAIRED}" ] && \
-       is_valid_gz "${R1_PAIRED}" && is_valid_gz "${R2_PAIRED}"; then
+       is_valid_gz "${R1_PAIRED}" && is_valid_gz "${R2_PAIRED}"; then  # both paired outputs present and intact?
         log_msg "Trimmed FASTQs for ${SRR} already exist, skipping."
         continue
     fi
@@ -340,14 +340,14 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
     log_msg "Running Trimmomatic on ${SRR}..."
 
     # Build trimmomatic command with or without adapter trimming
-    TRIM_STEPS=""
-    if [ -n "${ADAPTER_FILE}" ] && [ -f "${ADAPTER_FILE}" ]; then
-        TRIM_STEPS="ILLUMINACLIP:${ADAPTER_FILE}:2:30:10:2:True "
+    TRIM_STEPS=""                                    # accumulate Trimmomatic's ordered trimming steps here
+    if [ -n "${ADAPTER_FILE}" ] && [ -f "${ADAPTER_FILE}" ]; then  # only add adapter clipping if the adapter file exists
+        TRIM_STEPS="ILLUMINACLIP:${ADAPTER_FILE}:2:30:10:2:True "  # adapter-clip step (recommended TruSeq3 PE params)
     fi
-    TRIM_STEPS+="LEADING:${TRIM_LEADING} TRAILING:${TRIM_TRAILING} "
-    TRIM_STEPS+="SLIDINGWINDOW:${TRIM_SLIDINGWINDOW} "
-    TRIM_STEPS+="AVGQUAL:${TRIM_AVGQUAL} "
-    TRIM_STEPS+="MINLEN:${TRIM_MINLEN}"
+    TRIM_STEPS+="LEADING:${TRIM_LEADING} TRAILING:${TRIM_TRAILING} "  # append leading/trailing edge trims
+    TRIM_STEPS+="SLIDINGWINDOW:${TRIM_SLIDINGWINDOW} "  # append the 4bp/Q15 sliding-window trim
+    TRIM_STEPS+="AVGQUAL:${TRIM_AVGQUAL} "           # append the whole-read Q15 average-quality gate
+    TRIM_STEPS+="MINLEN:${TRIM_MINLEN}"              # append the 50bp minimum-length filter (must come last)
 
     trimmomatic PE \
         -Xmx48g \
@@ -358,14 +358,14 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
         "${R1_PAIRED}" "${R1_UNPAIRED}" \
         "${R2_PAIRED}" "${R2_UNPAIRED}" \
         ${TRIM_STEPS} \
-        2>&1 | tee "${LOG_DIR}/${SRR}_trimmomatic.log"
-    check_exit "Trimmomatic failed for ${SRR}"
+        2>&1 | tee "${LOG_DIR}/${SRR}_trimmomatic.log"  # run Trimmomatic PE with the built step list, logging output
+    check_exit "Trimmomatic failed for ${SRR}"       # abort on Trimmomatic failure
 
     # Report trimming stats
-    if [ -f "${LOG_DIR}/${SRR}_trimmomatic_summary.txt" ]; then
+    if [ -f "${LOG_DIR}/${SRR}_trimmomatic_summary.txt" ]; then  # if the summary file was written...
         log_msg "Trimmomatic summary for ${SRR}:"
-        cat "${LOG_DIR}/${SRR}_trimmomatic_summary.txt" | while read -r line; do
-            log_msg "  ${line}"
+        cat "${LOG_DIR}/${SRR}_trimmomatic_summary.txt" | while read -r line; do  # ...echo each of its lines into the pipeline log
+            log_msg "  ${line}"                      # indent under the summary header
         done
     fi
 
@@ -378,11 +378,11 @@ done
 
 log_msg "========== STEP 5: Running post-trimming FastQC =========="
 
-for SRR in "${SRR_ACCESSIONS[@]}"; do
-    R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"
-    R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"
+for SRR in "${SRR_ACCESSIONS[@]}"; do                # QC each sample's trimmed reads
+    R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"  # trimmed forward paired reads
+    R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"  # trimmed reverse paired reads
 
-    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then
+    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then  # skip missing/corrupt input
         log_msg "WARNING: Trimmed FASTQs not found or corrupted for ${SRR}, skipping post-QC."
         continue
     fi
@@ -393,8 +393,8 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
         --outdir "${FASTQC_POST_DIR}" \
         --threads "${THREADS}" \
         --quiet \
-        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_post.log"
-    check_exit "FastQC (post-trimming) failed for ${SRR}"
+        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_post.log"  # QC the trimmed reads for a before/after comparison
+    check_exit "FastQC (post-trimming) failed for ${SRR}"  # abort on FastQC failure
 
     log_msg "Post-trimming FastQC completed for ${SRR}"
 done
@@ -411,8 +411,8 @@ multiqc \
     --filename "illumina_qc_report" \
     --title "PRJNA207834 - Illumina QC Summary (HIV-1 Uganda A1/D)" \
     --force \
-    2>&1 | tee "${LOG_DIR}/multiqc_illumina.log"
-check_exit "MultiQC failed"
+    2>&1 | tee "${LOG_DIR}/multiqc_illumina.log"     # aggregate all QC + Trimmomatic logs into one report; --force overwrites a prior run
+check_exit "MultiQC failed"                          # abort if aggregation failed
 
 log_msg "MultiQC report generated: ${MULTIQC_DIR}/illumina_qc_report.html"
 
@@ -437,45 +437,45 @@ log_msg "MultiQC report generated: ${MULTIQC_DIR}/illumina_qc_report.html"
 
 log_msg "========== STEP 6.5: Deduplication + Kraken2 contamination filtering =========="
 
-mkdir -p "${DEDUP_DIR}" "${KRAKEN2_DIR}"
+mkdir -p "${DEDUP_DIR}" "${KRAKEN2_DIR}"             # ensure the dedup and Kraken2 output dirs exist
 
-if [ ! -s "${KRAKEN2_DB}/nodes.dmp" ]; then
-    log_msg "WARNING: Kraken2 database not found at ${KRAKEN2_DB} -- skipping dedup+Kraken2 filtering. Reference mapping below will fall back to plain Trimmomatic output."
+if [ ! -s "${KRAKEN2_DB}/nodes.dmp" ]; then          # if the Kraken2 DB isn't present...
+    log_msg "WARNING: Kraken2 database not found at ${KRAKEN2_DB} -- skipping dedup+Kraken2 filtering. Reference mapping below will fall back to plain Trimmomatic output."  # ...warn and skip; mapping will use un-filtered reads
 else
-    for SRR in "${SRR_ACCESSIONS[@]}"; do
-        R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"
-        R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"
-        DEDUP_R1="${DEDUP_DIR}/${SRR}_1.dedup.fastq.gz"
-        DEDUP_R2="${DEDUP_DIR}/${SRR}_2.dedup.fastq.gz"
-        KRAKEN_R1="${KRAKEN2_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
-        KRAKEN_R2="${KRAKEN2_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+    for SRR in "${SRR_ACCESSIONS[@]}"; do            # dedup + host-filter each sample
+        R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"  # Trimmomatic forward paired reads
+        R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"  # Trimmomatic reverse paired reads
+        DEDUP_R1="${DEDUP_DIR}/${SRR}_1.dedup.fastq.gz"  # deduped forward mate
+        DEDUP_R2="${DEDUP_DIR}/${SRR}_2.dedup.fastq.gz"  # deduped reverse mate
+        KRAKEN_R1="${KRAKEN2_DIR}/${SRR}_1.kraken_filtered.fastq.gz"  # host-removed forward mate
+        KRAKEN_R2="${KRAKEN2_DIR}/${SRR}_2.kraken_filtered.fastq.gz"  # host-removed reverse mate
 
-        if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then
+        if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then  # skip missing/corrupt trimmed input
             log_msg "WARNING: Trimmomatic output not found or corrupted for ${SRR}, skipping dedup+Kraken2."
             continue
         fi
 
-        if is_step_done "${CHECKPOINT_DIR}/${SRR}_kraken2.done" "${KRAKEN_R1}" "${KRAKEN_R2}"; then
+        if is_step_done "${CHECKPOINT_DIR}/${SRR}_kraken2.done" "${KRAKEN_R1}" "${KRAKEN_R2}"; then  # checkpoint + valid outputs means already done
             log_msg "Dedup+Kraken2 filtering already completed for ${SRR}, skipping."
             continue
         fi
 
-        if [ ! -s "${DEDUP_R1}" ] || [ ! -s "${DEDUP_R2}" ] || ! is_valid_gz "${DEDUP_R1}" || ! is_valid_gz "${DEDUP_R2}"; then
+        if [ ! -s "${DEDUP_R1}" ] || [ ! -s "${DEDUP_R2}" ] || ! is_valid_gz "${DEDUP_R1}" || ! is_valid_gz "${DEDUP_R2}"; then  # skip dedup if a valid deduped pair already exists
             log_msg "Deduplicating ${SRR}..."
             bash "${BASE_DIR}/scripts/utils/fastp_dedup.sh" \
                 "${R1_PAIRED}" "${R2_PAIRED}" "${DEDUP_R1}" "${DEDUP_R2}" \
                 "${DEDUP_DIR}/${SRR}_dedup_fastp" \
-                2>&1 | tee "${LOG_DIR}/${SRR}_dedup.log"
-            check_exit "fastp dedup failed for ${SRR}"
+                2>&1 | tee "${LOG_DIR}/${SRR}_dedup.log"  # run the fastp dedup-only wrapper on Trimmomatic's output
+            check_exit "fastp dedup failed for ${SRR}"  # abort on dedup failure
         fi
 
         log_msg "Running Kraken2 on ${SRR}..."
         bash "${BASE_DIR}/scripts/utils/kraken2_filter_reads.sh" \
             "${DEDUP_R1}" "${DEDUP_R2}" "${KRAKEN2_DIR}" "${SRR}" "${KRAKEN2_DB}" \
-            2>&1 | tee "${LOG_DIR}/${SRR}_kraken2.log"
-        check_exit "Kraken2 filtering failed for ${SRR}"
-        verify_nonempty "${KRAKEN_R1}" "Kraken2-filtered reads for ${SRR}"
-        touch "${CHECKPOINT_DIR}/${SRR}_kraken2.done"
+            2>&1 | tee "${LOG_DIR}/${SRR}_kraken2.log"  # drop host/bacterial reads from the deduped pair
+        check_exit "Kraken2 filtering failed for ${SRR}"  # abort on Kraken2 failure
+        verify_nonempty "${KRAKEN_R1}" "Kraken2-filtered reads for ${SRR}"  # sanity-check the filter produced output
+        touch "${CHECKPOINT_DIR}/${SRR}_kraken2.done"  # mark this sample's filtering complete for resumes
 
         log_msg "Dedup+Kraken2 filtering completed for ${SRR}"
     done
@@ -487,83 +487,83 @@ fi
 
 log_msg "========== STEP 7: Reference Mapping with BWA-MEM =========="
 
-REF_ACC="K03455.1"
-REF_FASTA="${REF_DIR}/${REF_ACC}.fasta"
+REF_ACC="K03455.1"                                   # HXB2 reference accession (the HIV-1 coordinate standard)
+REF_FASTA="${REF_DIR}/${REF_ACC}.fasta"              # local path to the reference FASTA
 
-mkdir -p "${ALIGN_DIR}/bam" "${REF_DIR}" "${CHECKPOINT_DIR}"
+mkdir -p "${ALIGN_DIR}/bam" "${REF_DIR}" "${CHECKPOINT_DIR}"  # ensure alignment/reference/checkpoint dirs exist
 
-if [ ! -s "${REF_FASTA}" ]; then
+if [ ! -s "${REF_FASTA}" ]; then                     # download + index the reference only if it's not already present
     log_msg "Downloading HXB2 reference (${REF_ACC})..."
-    wget -q -O "${REF_FASTA}" "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=${REF_ACC}&rettype=fasta&retmode=text"
-    verify_nonempty "${REF_FASTA}" "HXB2 reference download"
-    check_exit "HXB2 reference download failed"
-    bwa index "${REF_FASTA}" > "${LOG_DIR}/bwa_index.log" 2>&1
-    check_exit "bwa index failed on HXB2 reference"
-    samtools faidx "${REF_FASTA}"
-    check_exit "samtools faidx failed on HXB2 reference"
+    wget -q -O "${REF_FASTA}" "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=${REF_ACC}&rettype=fasta&retmode=text"  # fetch the HXB2 FASTA from NCBI
+    verify_nonempty "${REF_FASTA}" "HXB2 reference download"  # ensure the download produced content
+    check_exit "HXB2 reference download failed"      # abort if the download failed
+    bwa index "${REF_FASTA}" > "${LOG_DIR}/bwa_index.log" 2>&1  # build the BWA index needed for mapping
+    check_exit "bwa index failed on HXB2 reference"  # abort on index failure
+    samtools faidx "${REF_FASTA}"                    # build the .fai index needed by bcftools
+    check_exit "samtools faidx failed on HXB2 reference"  # abort on faidx failure
 fi
 
-MAPPED_COUNT=0
-TOTAL_TO_MAP=0
+MAPPED_COUNT=0                                       # running count of successfully mapped samples
+TOTAL_TO_MAP=0                                       # running count of samples that had input to map
 
-for SRR in "${SRR_ACCESSIONS[@]}"; do
+for SRR in "${SRR_ACCESSIONS[@]}"; do                # map each sample to HXB2 and call a consensus
     # Prefer deduplicated, Kraken2-filtered reads (STEP 6.5); fall back to
     # plain Trimmomatic output if filtering was skipped (e.g. Kraken2 DB
     # not present yet).
-    R1_PAIRED="${KRAKEN2_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
-    R2_PAIRED="${KRAKEN2_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
-    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ]; then
-        R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"
-        R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"
+    R1_PAIRED="${KRAKEN2_DIR}/${SRR}_1.kraken_filtered.fastq.gz"  # preferred forward input: host-filtered reads
+    R2_PAIRED="${KRAKEN2_DIR}/${SRR}_2.kraken_filtered.fastq.gz"  # preferred reverse input: host-filtered reads
+    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ]; then  # if filtering was skipped/absent...
+        R1_PAIRED="${TRIMMED_DIR}/${SRR}_1_paired.fastq.gz"  # ...fall back to plain trimmed forward reads
+        R2_PAIRED="${TRIMMED_DIR}/${SRR}_2_paired.fastq.gz"  # ...fall back to plain trimmed reverse reads
     fi
-    BAM_OUT="${ALIGN_DIR}/bam/${SRR}.sorted.bam"
-    VCF_OUT="${ALIGN_DIR}/bam/${SRR}.vcf.gz"
-    CONSENSUS_OUT="${ALIGN_DIR}/${SRR}_consensus.fasta"
-    CHKPT="${CHECKPOINT_DIR}/${SRR}_bwa.done"
+    BAM_OUT="${ALIGN_DIR}/bam/${SRR}.sorted.bam"     # sorted alignment output
+    VCF_OUT="${ALIGN_DIR}/bam/${SRR}.vcf.gz"         # variant calls used to build the consensus
+    CONSENSUS_OUT="${ALIGN_DIR}/${SRR}_consensus.fasta"  # per-sample consensus sequence
+    CHKPT="${CHECKPOINT_DIR}/${SRR}_bwa.done"        # resume marker for this sample's mapping
 
-    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then
+    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then  # no valid input -> nothing to map
         continue
     fi
 
-    TOTAL_TO_MAP=$((TOTAL_TO_MAP + 1))
+    TOTAL_TO_MAP=$((TOTAL_TO_MAP + 1))               # this sample has input, so count it toward the total
 
-    if is_step_done "${CHKPT}" "${BAM_OUT}" "${CONSENSUS_OUT}"; then
+    if is_step_done "${CHKPT}" "${BAM_OUT}" "${CONSENSUS_OUT}"; then  # checkpoint + valid BAM/consensus means already mapped
         log_msg "Mapping already completed for ${SRR}, skipping."
-        MAPPED_COUNT=$((MAPPED_COUNT + 1))
+        MAPPED_COUNT=$((MAPPED_COUNT + 1))           # count it as already-done
         continue
     fi
 
     log_msg "Aligning ${SRR} to HXB2..."
     bwa mem -t "${THREADS}" "${REF_FASTA}" "${R1_PAIRED}" "${R2_PAIRED}" 2> "${LOG_DIR}/${SRR}_bwa.log" | \
         samtools view -@ "${THREADS}" -b - | \
-        samtools sort -@ "${THREADS}" -o "${BAM_OUT}"
-    if [ $? -ne 0 ] || ! verify_nonempty "${BAM_OUT}" "alignment for ${SRR}"; then
+        samtools sort -@ "${THREADS}" -o "${BAM_OUT}"  # align, convert to BAM, and coordinate-sort in one pipe
+    if [ $? -ne 0 ] || ! verify_nonempty "${BAM_OUT}" "alignment for ${SRR}"; then  # mapping failed or produced no BAM
         log_msg "WARNING: mapping failed for ${SRR}, skipping (not marking done). See ${LOG_DIR}/${SRR}_bwa.log"
-        continue
+        continue                                     # skip without a checkpoint so it retries next run
     fi
 
-    samtools index "${BAM_OUT}"
-    if [ $? -ne 0 ]; then
+    samtools index "${BAM_OUT}"                      # build the BAM index needed by downstream tools
+    if [ $? -ne 0 ]; then                            # if indexing failed...
         log_msg "WARNING: samtools index failed for ${SRR}, skipping (not marking done)."
-        continue
+        continue                                     # ...skip without marking done
     fi
 
     # Generate consensus sequence for downstream steps
     bcftools mpileup -Ou -f "${REF_FASTA}" "${BAM_OUT}" 2> "${LOG_DIR}/${SRR}_bcftools.log" | \
-        bcftools call -c -Oz -o "${VCF_OUT}" 2>> "${LOG_DIR}/${SRR}_bcftools.log"
-    if [ $? -ne 0 ] || ! verify_nonempty "${VCF_OUT}" "VCF for ${SRR}"; then
+        bcftools call -c -Oz -o "${VCF_OUT}" 2>> "${LOG_DIR}/${SRR}_bcftools.log"  # pile up reads and call variants against HXB2
+    if [ $? -ne 0 ] || ! verify_nonempty "${VCF_OUT}" "VCF for ${SRR}"; then  # variant calling failed or produced no VCF
         log_msg "WARNING: variant calling failed for ${SRR}, skipping (not marking done). See ${LOG_DIR}/${SRR}_bcftools.log"
         continue
     fi
 
-    tabix -p vcf "${VCF_OUT}" 2>> "${LOG_DIR}/${SRR}_bcftools.log"
-    if [ $? -ne 0 ]; then
+    tabix -p vcf "${VCF_OUT}" 2>> "${LOG_DIR}/${SRR}_bcftools.log"  # index the VCF so bcftools consensus can use it
+    if [ $? -ne 0 ]; then                            # if indexing the VCF failed...
         log_msg "WARNING: tabix indexing failed for ${SRR}, skipping (not marking done)."
         continue
     fi
 
-    cat "${REF_FASTA}" | bcftools consensus "${VCF_OUT}" > "${CONSENSUS_OUT}" 2>> "${LOG_DIR}/${SRR}_bcftools.log"
-    if [ $? -ne 0 ] || ! verify_nonempty "${CONSENSUS_OUT}" "consensus for ${SRR}"; then
+    cat "${REF_FASTA}" | bcftools consensus "${VCF_OUT}" > "${CONSENSUS_OUT}" 2>> "${LOG_DIR}/${SRR}_bcftools.log"  # apply the sample's variants onto HXB2 to build its consensus
+    if [ $? -ne 0 ] || ! verify_nonempty "${CONSENSUS_OUT}" "consensus for ${SRR}"; then  # consensus step failed or empty
         log_msg "WARNING: consensus generation failed for ${SRR}, skipping (not marking done). See ${LOG_DIR}/${SRR}_bcftools.log"
         continue
     fi
@@ -573,10 +573,10 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do
     # otherwise carry the identical ">${REF_ACC} ..." header. Left unfixed,
     # concatenating all samples for MSA (Step 9) would make every sequence
     # indistinguishable by ID. Rename the header to this sample's accession.
-    sed -i "1s/.*/>${SRR}/" "${CONSENSUS_OUT}"
+    sed -i "1s/.*/>${SRR}/" "${CONSENSUS_OUT}"       # rewrite the FASTA header to this sample's accession
 
-    touch "${CHKPT}"
-    MAPPED_COUNT=$((MAPPED_COUNT + 1))
+    touch "${CHKPT}"                                 # mark mapping+consensus complete for resumes
+    MAPPED_COUNT=$((MAPPED_COUNT + 1))               # count this sample as successfully mapped
     log_msg "Mapping and consensus generation completed for ${SRR}"
 done
 
@@ -588,19 +588,19 @@ log_msg "Step 7 complete: ${MAPPED_COUNT}/${TOTAL_TO_MAP} samples mapped success
 
 log_msg "========== STEP 8: Biological Filtering (Poplars & HIVSeqinR) =========="
 
-for SRR in "${SRR_ACCESSIONS[@]}"; do
-    CONSENSUS="${ALIGN_DIR}/${SRR}_consensus.fasta"
-    CHKPT="${CHECKPOINT_DIR}/${SRR}_filtering.done"
-    
-    if [ ! -f "${CONSENSUS}" ]; then continue; fi
-    if [ -f "${CHKPT}" ]; then continue; fi
+for SRR in "${SRR_ACCESSIONS[@]}"; do                # biological-filter each sample's consensus
+    CONSENSUS="${ALIGN_DIR}/${SRR}_consensus.fasta"  # this sample's consensus from Step 7
+    CHKPT="${CHECKPOINT_DIR}/${SRR}_filtering.done"  # resume marker for this step
+
+    if [ ! -f "${CONSENSUS}" ]; then continue; fi    # nothing to filter if no consensus exists
+    if [ -f "${CHKPT}" ]; then continue; fi          # already filtered -> skip
 
     log_msg "Running Hypermut 3 (Poplars) & HIVSeqinR on ${SRR}..."
     # Note: These are generalized commands. Adjust paths/params for your cluster environment.
     # poplars hypermut --input "${CONSENSUS}" --output "${FILTER_DIR}/${SRR}_poplars.fasta" || true
     # Rscript /path/to/HIVSeqinR/HIVSeqinR.R --input "${FILTER_DIR}/${SRR}_poplars.fasta" --outdir "${FILTER_DIR}/${SRR}_seqinr" || true
-    
-    touch "${CHKPT}"
+
+    touch "${CHKPT}"                                 # mark the (currently placeholder) step done
 done
 
 ##==========================================================================##
@@ -609,25 +609,25 @@ done
 
 log_msg "========== STEP 9: Multiple Sequence Alignment (MAFFT) =========="
 
-COMBINED_FASTA="${MSA_DIR}/all_filtered_consensus.fasta"
-MSA_OUT="${MSA_DIR}/aligned_consensus.fasta"
-CHKPT="${CHECKPOINT_DIR}/mafft_alignment.done"
+COMBINED_FASTA="${MSA_DIR}/all_filtered_consensus.fasta"  # all consensuses (plus HXB2) concatenated for alignment
+MSA_OUT="${MSA_DIR}/aligned_consensus.fasta"         # the resulting multiple sequence alignment
+CHKPT="${CHECKPOINT_DIR}/mafft_alignment.done"       # resume marker for the alignment step
 
-if ! is_step_done "${CHKPT}" "${MSA_OUT}"; then
+if ! is_step_done "${CHKPT}" "${MSA_OUT}"; then      # only align if not already done with valid output
     log_msg "Combining consensus sequences (with HXB2 as coordinate anchor) and aligning with MAFFT L-INS-i..."
     # HXB2 is prepended so it shares the alignment's column space -- Step 11's
     # U3 extraction anchors on HXB2's own row to convert its real annotated
     # genome coordinates into alignment-column coordinates.
-    cat "${REF_FASTA}" "${ALIGN_DIR}"/*_consensus.fasta > "${COMBINED_FASTA}" 2>/dev/null || true
-    if [ -s "${COMBINED_FASTA}" ]; then
-        mafft --localpair --maxiterate 1000 --thread "${THREADS}" "${COMBINED_FASTA}" > "${MSA_OUT}" 2> "${LOG_DIR}/mafft.log"
-        if verify_nonempty "${MSA_OUT}" "MAFFT alignment"; then
-            touch "${CHKPT}"
+    cat "${REF_FASTA}" "${ALIGN_DIR}"/*_consensus.fasta > "${COMBINED_FASTA}" 2>/dev/null || true  # concatenate HXB2 + all consensuses (tolerate no matches)
+    if [ -s "${COMBINED_FASTA}" ]; then              # only align if there's something to align
+        mafft --localpair --maxiterate 1000 --thread "${THREADS}" "${COMBINED_FASTA}" > "${MSA_OUT}" 2> "${LOG_DIR}/mafft.log"  # L-INS-i high-accuracy alignment
+        if verify_nonempty "${MSA_OUT}" "MAFFT alignment"; then  # only checkpoint if alignment produced output
+            touch "${CHKPT}"                         # mark the alignment step complete
         else
             log_msg "WARNING: MAFFT alignment failed, not marking step done. See ${LOG_DIR}/mafft.log"
         fi
     else
-        log_msg "No consensus sequences found for MSA."
+        log_msg "No consensus sequences found for MSA."  # nothing was produced upstream
     fi
 fi
 
@@ -637,15 +637,15 @@ fi
 
 log_msg "========== STEP 10: Subtyping (jpHMM, IQ-TREE 2, COMET, REGA) =========="
 
-CHKPT="${CHECKPOINT_DIR}/subtyping.done"
+CHKPT="${CHECKPOINT_DIR}/subtyping.done"             # resume marker for the subtyping step
 
-if [ ! -f "${CHKPT}" ] && [ -f "${MSA_OUT}" ]; then
+if [ ! -f "${CHKPT}" ] && [ -f "${MSA_OUT}" ]; then  # only run once, and only if the MSA exists
     log_msg "Running subtyping pipeline..."
     # Generalized commands
     # jpHMM -v HIV -s "${MSA_OUT}" -o "${SUBTYPE_DIR}/jphmm_out" || true
     # iqtree2 -s "${MSA_OUT}" -m MFP -B 1000 -T "${THREADS}" --prefix "${SUBTYPE_DIR}/iqtree" || true
     # comet -i "${MSA_OUT}" -o "${SUBTYPE_DIR}/comet_results.csv" || true
-    touch "${CHKPT}"
+    touch "${CHKPT}"                                 # mark the (currently placeholder) step done
 fi
 
 ##==========================================================================##
@@ -654,13 +654,13 @@ fi
 
 log_msg "========== STEP 11: U3 Extraction & Motif Mapping =========="
 
-U3_CHKPT="${CHECKPOINT_DIR}/u3_extraction.done"
-U3_GAPPED="${MOTIF_DIR}/U3_aligned.fasta"
-U3_EXTRACTED="${MOTIF_DIR}/U3_extracted.fasta"
-U3_WARNINGS="${MOTIF_DIR}/u3_extraction_warnings.log"
+U3_CHKPT="${CHECKPOINT_DIR}/u3_extraction.done"      # resume marker for U3 extraction
+U3_GAPPED="${MOTIF_DIR}/U3_aligned.fasta"            # extracted U3 columns still in alignment (gapped) form
+U3_EXTRACTED="${MOTIF_DIR}/U3_extracted.fasta"       # final ungapped per-sample U3 sequences
+U3_WARNINGS="${MOTIF_DIR}/u3_extraction_warnings.log"  # outlier-check warnings from the extractor
 
-if ! is_step_done "${U3_CHKPT}" "${U3_EXTRACTED}"; then
-    if [ -s "${MSA_OUT}" ]; then
+if ! is_step_done "${U3_CHKPT}" "${U3_EXTRACTED}"; then  # only extract if not already done with valid output
+    if [ -s "${MSA_OUT}" ]; then                     # can only extract U3 if the MSA exists
         log_msg "Extracting 5' LTR U3 region, anchored to HXB2's real annotated coordinates..."
         bash "${BASE_DIR}/scripts/utils/extract_u3_by_hxb2_anchor.sh" \
             --alignment "${MSA_OUT}" \
@@ -669,32 +669,32 @@ if ! is_step_done "${U3_CHKPT}" "${U3_EXTRACTED}"; then
             --out-gapped "${U3_GAPPED}" \
             --out "${U3_EXTRACTED}" \
             --warnings-log "${U3_WARNINGS}" \
-            > "${LOG_DIR}/u3_extraction.log" 2>&1
-        if verify_nonempty "${U3_EXTRACTED}" "U3 extraction"; then
-            touch "${U3_CHKPT}"
-            if [ -s "${U3_WARNINGS}" ]; then
+            > "${LOG_DIR}/u3_extraction.log" 2>&1    # extract U3 by mapping HXB2's annotated coords to alignment columns
+        if verify_nonempty "${U3_EXTRACTED}" "U3 extraction"; then  # only checkpoint if extraction produced output
+            touch "${U3_CHKPT}"                      # mark U3 extraction complete
+            if [ -s "${U3_WARNINGS}" ]; then         # surface any outlier warnings to the log
                 log_msg "WARNING: some samples flagged by the U3 extraction outlier check, see ${U3_WARNINGS}"
             fi
         else
             log_msg "WARNING: U3 extraction failed, not marking step done. See ${LOG_DIR}/u3_extraction.log"
         fi
     else
-        log_msg "No MSA output found, skipping U3 extraction."
+        log_msg "No MSA output found, skipping U3 extraction."  # nothing upstream to extract from
     fi
 fi
 
-CHKPT="${CHECKPOINT_DIR}/motif_mapping.done"
+CHKPT="${CHECKPOINT_DIR}/motif_mapping.done"         # resume marker for the motif-mapping step
 
-if [ ! -f "${CHKPT}" ] && [ -s "${U3_EXTRACTED}" ]; then
+if [ ! -f "${CHKPT}" ] && [ -s "${U3_EXTRACTED}" ]; then  # only run once, and only if U3 sequences exist
     log_msg "Running motif scanning (FIMO) and G-quadruplex prediction (gquad + pqsfinder) on the extracted U3 regions..."
 
     # 1. TFBS motif scanning with FIMO against the 6 core JASPAR TFs --
     #    FIMO is the comparison harness's recommended winner (fastest,
     #    cleanest output; see results/motif_mapping/illumina/ease_of_use_notes.md).
-    FIMO_OUT="${MOTIF_DIR}/fimo_out"
+    FIMO_OUT="${MOTIF_DIR}/fimo_out"                 # FIMO output dir
     fimo --oc "${FIMO_OUT}" --thresh 1e-4 "${REF_DIR}/jaspar/core6_pfms.meme" "${U3_EXTRACTED}" \
-        > "${LOG_DIR}/motif_fimo.log" 2>&1
-    if [ -s "${FIMO_OUT}/fimo.tsv" ]; then
+        > "${LOG_DIR}/motif_fimo.log" 2>&1           # scan U3 for the 6 core TF binding motifs (p<1e-4)
+    if [ -s "${FIMO_OUT}/fimo.tsv" ]; then           # FIMO writes hits to fimo.tsv
         log_msg "FIMO motif scan complete: ${FIMO_OUT}/fimo.tsv"
     else
         log_msg "WARNING: FIMO produced no output, see ${LOG_DIR}/motif_fimo.log"
@@ -702,25 +702,25 @@ if [ ! -f "${CHKPT}" ] && [ -s "${U3_EXTRACTED}" ]; then
 
     # 2. G-quadruplex prediction: gquad (primary, per the tools review) and
     #    pqsfinder (confirmation pass, imperfection-tolerant scoring).
-    GQUAD_OUT="${MOTIF_DIR}/gquad_out.gff3"
+    GQUAD_OUT="${MOTIF_DIR}/gquad_out.gff3"          # gquad G4-prediction output
     bash "${BASE_DIR}/scripts/motif_mapping/illumina/run_gquad.sh" "${U3_EXTRACTED}" "${GQUAD_OUT}" \
-        > "${LOG_DIR}/motif_gquad.log" 2>&1
-    if [ -s "${GQUAD_OUT}" ]; then
+        > "${LOG_DIR}/motif_gquad.log" 2>&1          # predict G-quadruplexes in U3 (primary tool)
+    if [ -s "${GQUAD_OUT}" ]; then                   # non-empty output means it ran
         log_msg "gquad G-quadruplex prediction complete: ${GQUAD_OUT}"
     else
         log_msg "WARNING: gquad produced no output, see ${LOG_DIR}/motif_gquad.log"
     fi
 
-    PQSFINDER_OUT="${MOTIF_DIR}/pqsfinder_out.gff3"
+    PQSFINDER_OUT="${MOTIF_DIR}/pqsfinder_out.gff3"  # pqsfinder G4-prediction output
     bash "${BASE_DIR}/scripts/motif_mapping/illumina/run_pqsfinder.sh" "${U3_EXTRACTED}" "${PQSFINDER_OUT}" \
-        > "${LOG_DIR}/motif_pqsfinder.log" 2>&1
-    if [ -s "${PQSFINDER_OUT}" ]; then
+        > "${LOG_DIR}/motif_pqsfinder.log" 2>&1      # confirmation G4 pass with imperfection-tolerant scoring
+    if [ -s "${PQSFINDER_OUT}" ]; then               # non-empty output means it ran
         log_msg "pqsfinder G-quadruplex prediction complete: ${PQSFINDER_OUT}"
     else
         log_msg "WARNING: pqsfinder produced no output, see ${LOG_DIR}/motif_pqsfinder.log"
     fi
 
-    touch "${CHKPT}"
+    touch "${CHKPT}"                                 # mark motif mapping complete
 fi
 
 ##==========================================================================##

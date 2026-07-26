@@ -6,8 +6,8 @@
 # used directly instead of this script, since a second fastp pass would be
 # redundant.
 # Usage: fastp_dedup.sh <R1.fastq.gz> <R2.fastq.gz> <R1_OUT> <R2_OUT> <REPORT_PREFIX>
-set -uo pipefail
-R1="$1" R2="$2" R1_OUT="$3" R2_OUT="$4" REPORT_PREFIX="$5"
+set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
+R1="$1" R2="$2" R1_OUT="$3" R2_OUT="$4" REPORT_PREFIX="$5"  # positional args: input R1/R2, output R1/R2, and report name prefix
 
 fastp \
     -i "${R1}" -I "${R2}" \
@@ -15,4 +15,4 @@ fastp \
     --dedup \
     --disable_adapter_trimming --disable_quality_filtering --disable_length_filtering \
     --json "${REPORT_PREFIX}.json" --html "${REPORT_PREFIX}.html" \
-    --thread "${THREADS:-4}"
+    --thread "${THREADS:-4}"                          # fastp in dedup-only mode: all trimming/filtering off, so it only removes duplicate pairs

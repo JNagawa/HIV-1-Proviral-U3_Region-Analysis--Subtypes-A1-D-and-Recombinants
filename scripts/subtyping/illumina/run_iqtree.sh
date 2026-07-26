@@ -8,7 +8,7 @@
 # comparison-harness subset triggers. Re-add -B 1000 once this is run
 # against the full cohort, where bootstrap support is meaningful.
 # Usage: run_iqtree.sh <ALIGNMENT_FASTA> <OUTDIR> <PREFIX>
-set -uo pipefail
-ALN="$1" OUTDIR="$2" PREFIX="$3"
-mkdir -p "${OUTDIR}"
-iqtree2 -s "${ALN}" -m MFP -T "${THREADS:-4}" --prefix "${OUTDIR}/${PREFIX}" -redo
+set -uo pipefail                                     # -u errors on unset vars, pipefail catches mid-pipe failures
+ALN="$1" OUTDIR="$2" PREFIX="$3"                     # args: input alignment, output dir, and output filename prefix
+mkdir -p "${OUTDIR}"                                 # ensure the output dir exists before IQ-TREE2 writes into it
+iqtree2 -s "${ALN}" -m MFP -T "${THREADS:-4}" --prefix "${OUTDIR}/${PREFIX}" -redo  # build ML tree; MFP auto-picks the model, -redo overwrites any prior run
