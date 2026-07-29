@@ -7,14 +7,3 @@
 # output based on raw sequence positions 
 # of the following sequence(s): 
 
->211_0
-1	789	5'-Insertion
-790	2115	D
-2116	2545	A1
-2546	3307	D
-3308	3460	A1
-3461	4006	D
-4007	5938	A1
-5939	9411	B
-9412	9719	3'-Insertion
-

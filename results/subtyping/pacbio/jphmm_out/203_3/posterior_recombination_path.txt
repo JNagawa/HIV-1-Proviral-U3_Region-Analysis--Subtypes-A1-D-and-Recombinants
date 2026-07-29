@@ -7,3 +7,9 @@
 # output based on raw sequence positions 
 # of the following sequence(s): 
 
+>203_3
+1	789	5'-Insertion
+790	1161	A1
+1162	9411	B
+9412	9719	3'-Insertion
+

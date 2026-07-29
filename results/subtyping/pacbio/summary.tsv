@@ -1,3 +1,4 @@
 stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
 subtyping_pacbio	jphmm	124_4	671.29		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/pacbio/jphmm_out/124_4/posterior_recombination_path.txt	(see ease_of_use_notes.md)
 subtyping_pacbio	jphmm	128_5	640.52		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/pacbio/jphmm_out/128_5/posterior_recombination_path.txt	(see ease_of_use_notes.md)
+subtyping_pacbio	jphmm	203_3	624.86		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/pacbio/jphmm_out/203_3/posterior_recombination_path.txt	(see ease_of_use_notes.md)

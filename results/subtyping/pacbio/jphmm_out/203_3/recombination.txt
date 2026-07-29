@@ -10,3 +10,9 @@
 # predicted recombination with breakpoints based on raw sequence positions 
 # of the following sequence(s): 
 
+>203_3 (bw=1e-20)
+1	789	5'-Insertion
+790	1165	A1
+1166	9411	B
+9412	9719	3'-Insertion
+
