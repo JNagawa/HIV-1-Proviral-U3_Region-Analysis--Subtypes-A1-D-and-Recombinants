@@ -58,9 +58,11 @@ CONDA_SH="$HOME/miniconda3/etc/profile.d/conda.sh"   # usual miniconda hook loca
 if [ -f "$CONDA_SH" ]; then                          # if that hook exists...
     source "$CONDA_SH"                               # ...source it directly
 elif command -v conda >/dev/null 2>&1; then          # else if conda is already on PATH...
-    source "$(conda info --base)/etc/profile.d/conda.sh"  # ...source the hook from its reported base
+    # ...source the hook from its reported base
+    source "$(conda info --base)/etc/profile.d/conda.sh"
 else
-    echo "ERROR: Conda not found. Please load conda before running this script." >&2  # neither worked: fail loudly
+    # neither worked: fail loudly
+    echo "ERROR: Conda not found. Please load conda before running this script." >&2
     exit 1                                           # abort rather than run without the tools
 fi
 conda activate HIV_U3analysis                        # activate the env holding all pipeline tools
@@ -72,7 +74,8 @@ conda activate HIV_U3analysis                        # activate the env holding 
 BIOPROJECT="PRJNA207834"                             # SRA BioProject this step processes
 # Use however many CPUs Slurm actually allocated this job; if run outside
 # Slurm (no SLURM_CPUS_PER_TASK set), fall back to 8.
-THREADS=${SLURM_CPUS_PER_TASK:-8}                    # thread count for every multi-threaded tool below
+# thread count for every multi-threaded tool below
+THREADS=${SLURM_CPUS_PER_TASK:-8}
 
 # SRA accessions for BioProject PRJNA207834
 # 24 HIV-1 near-full-genome Illumina MiSeq paired-end samples from Uganda
@@ -110,42 +113,59 @@ SRR_ACCESSIONS=(                                     # the 24 samples this step 
 # Q3 is barely above "no confidence at all" -- this is deliberately lenient,
 # just removing the occasional genuinely-unusable edge base; the real
 # quality bar is enforced by SLIDINGWINDOW and AVGQUAL below, not this.
-TRIM_LEADING=3                                       # trim leading bases below Q3 (lenient edge cleanup)
-TRIM_TRAILING=3                                      # trim trailing bases below Q3 (lenient edge cleanup)
+# trim leading bases below Q3 (lenient edge cleanup)
+TRIM_LEADING=3
+# trim trailing bases below Q3 (lenient edge cleanup)
+TRIM_TRAILING=3
 # SLIDINGWINDOW:4:15 -- slide a 4-base window along the read; once the
 # window's mean quality falls below Q15 (~97% accuracy), trim from there to
 # the read's end. 4bp is Trimmomatic's own recommended window size; Q15 is
 # Trimmomatic's own manual example threshold.
-TRIM_SLIDINGWINDOW="4:15"                            # 4bp window, trim once its mean quality drops below Q15
+# 4bp window, trim once its mean quality drops below Q15
+TRIM_SLIDINGWINDOW="4:15"
 # MINLEN:50 -- discard a read/pair if trimming leaves it under 50bp. Reads
 # are 251bp to start, and the reference (HXB2, K03455.1) is only ~9.7kb, so
 # very short leftover fragments map ambiguously (multi-mapping) with
 # BWA-MEM; 50bp keeps enough sequence for confident, unique placement while
 # still retaining reads that only lost their tail to quality trimming.
-TRIM_MINLEN=50                                       # drop reads shorter than 50bp after trimming (avoids multi-mapping)
+# drop reads shorter than 50bp after trimming (avoids multi-mapping)
+TRIM_MINLEN=50
 # AVGQUAL:15 -- independent of the sliding window, also require the read's
 # OVERALL average quality to be >=Q15 after trimming. A read can pass a
 # 4bp sliding window check while still being poor quality on average; this
 # is the final whole-read quality gate.
-TRIM_AVGQUAL=15                                      # whole-read mean-quality floor (Q15), applied to both trimmers
+# whole-read mean-quality floor (Q15), applied to both trimmers
+TRIM_AVGQUAL=15
 
 # Directory structure (matches scripts/pipelines/illumina_u3analysis.sh for
 # everything except the trimmed-reads directories, so this step's output is
 # otherwise a drop-in replacement for that script's steps 1-6)
-BASE_DIR="$(pwd)"                                                  # repo root -- MUST be invoked from here (see README)
+# repo root -- MUST be invoked from here (see README)
+BASE_DIR="$(pwd)"
 RAW_DIR="${BASE_DIR}/data/raw/illumina"                            # downloaded, untrimmed FASTQs
-QC_DIR="${BASE_DIR}/results/reports/qc/illumina"                   # all Illumina QC output lives under here
+# all Illumina QC output lives under here
+QC_DIR="${BASE_DIR}/results/reports/qc/illumina"
 FASTQC_PRE_DIR="${QC_DIR}/fastqc_pre"                              # FastQC on raw reads
-FASTQC_POST_DIR="${QC_DIR}/fastqc_post"                            # FastQC on Trimmomatic's trimmed reads
-MULTIQC_DIR="${QC_DIR}/multiqc"                                    # the two aggregated MultiQC reports
-TRIMMED_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/trimmed_trimmomatic"  # Trimmomatic's trimmed reads
-TRIMMED_FASTP_DIR="${BASE_DIR}/data/processed/illumina/trimmed_fastp"              # fastp's trimmed reads
-DEDUP_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/dedup_trimmomatic"      # fastp --dedup-only pass on Trimmomatic's output
-KRAKEN2_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/kraken2_trimmomatic"  # Kraken2-filtered, Trimmomatic track
-KRAKEN2_FASTP_DIR="${BASE_DIR}/data/processed/illumina/kraken2_fastp"              # Kraken2-filtered, fastp track (production input to assembly)
-KRAKEN2_DB="${BASE_DIR}/data/reference/kraken2_standard_16gb_db"                   # size-capped Standard DB (human+bacteria+archaea+viral)
-LOG_DIR="${BASE_DIR}/logs"                                         # per-sample tool logs (shared across all steps)
-CHECKPOINT_DIR="${BASE_DIR}/checkpoints"                           # resume-state markers (shared across all steps)
+# FastQC on Trimmomatic's trimmed reads
+FASTQC_POST_DIR="${QC_DIR}/fastqc_post"
+# the two aggregated MultiQC reports
+MULTIQC_DIR="${QC_DIR}/multiqc"
+# Trimmomatic's trimmed reads
+TRIMMED_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/trimmed_trimmomatic"
+# fastp's trimmed reads
+TRIMMED_FASTP_DIR="${BASE_DIR}/data/processed/illumina/trimmed_fastp"
+# fastp --dedup-only pass on Trimmomatic's output
+DEDUP_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/dedup_trimmomatic"
+# Kraken2-filtered, Trimmomatic track
+KRAKEN2_TRIMMOMATIC_DIR="${BASE_DIR}/data/processed/illumina/kraken2_trimmomatic"
+# Kraken2-filtered, fastp track (production input to assembly)
+KRAKEN2_FASTP_DIR="${BASE_DIR}/data/processed/illumina/kraken2_fastp"
+# size-capped Standard DB (human+bacteria+archaea+viral)
+KRAKEN2_DB="${BASE_DIR}/data/reference/kraken2_standard_16gb_db"
+# per-sample tool logs (shared across all steps)
+LOG_DIR="${BASE_DIR}/logs"
+# resume-state markers (shared across all steps)
+CHECKPOINT_DIR="${BASE_DIR}/checkpoints"
 
 ##==========================================================================##
 ##                         HELPER FUNCTIONS                                  ##
@@ -154,15 +174,18 @@ CHECKPOINT_DIR="${BASE_DIR}/checkpoints"                           # resume-stat
 # Timestamped log line, tagged so it's easy to grep this step's output out
 # of a combined Slurm log.
 log_msg() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ILLUMINA/STEP1] $1"  # timestamp + step tag + the message argument
+    # timestamp + step tag + the message argument
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ILLUMINA/STEP1] $1"
 }
 
 # Call immediately after a command: if that command's exit code ($?) was
 # non-zero, log the given message and abort the whole script.
 check_exit() {
-    if [ $? -ne 0 ]; then                            # inspect the exit status of the previous command
+    # inspect the exit status of the previous command
+    if [ $? -ne 0 ]; then
         log_msg "ERROR: $1"                          # log the caller-supplied failure message
-        exit 1                                       # abort the pipeline (this step's failures are fatal)
+        # abort the pipeline (this step's failures are fatal)
+        exit 1
     fi
 }
 
@@ -170,21 +193,24 @@ check_exit() {
 # -- used everywhere below to distinguish a genuinely-complete output file
 # from a truncated one left behind by a crashed/killed earlier run.
 is_valid_gz() {
-    gzip -t "$1" >/dev/null 2>&1                      # test gzip integrity silently; exit status is the answer
+    # test gzip integrity silently; exit status is the answer
+    gzip -t "$1" >/dev/null 2>&1
 }
 
 # Fail fast with a clear message if a required tool is missing, rather than
 # discovering it 20 minutes into a run when a pipe silently produces
 # nothing.
 require_tool() {
-    command -v "$1" >/dev/null 2>&1 || { log_msg "ERROR: required tool '$1' not found on PATH. Check conda env HIV_U3analysis."; exit 1; }  # abort now if the tool isn't on PATH
+    # abort now if the tool isn't on PATH
+    command -v "$1" >/dev/null 2>&1 || { log_msg "ERROR: required tool '$1' not found on PATH. Check conda env HIV_U3analysis."; exit 1; }
 }
 
 # Trimmomatic needs an explicit path to its TruSeq adapter FASTA; conda
 # installs it in different places depending on version, so probe the
 # common locations rather than hardcoding one.
 find_adapter_file() {
-    local ADAPTER_LOCATIONS=(                        # candidate paths for the TruSeq3-PE-2.fa adapter file
+    # candidate paths for the TruSeq3-PE-2.fa adapter file
+    local ADAPTER_LOCATIONS=(
         "${CONDA_PREFIX}/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
         "${CONDA_PREFIX}/share/trimmomatic-*/adapters/TruSeq3-PE-2.fa"
         "/usr/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
@@ -194,13 +220,15 @@ find_adapter_file() {
         local found                                  # holds the first matching path, if any
         # compgen -G expands the glob safely (empty result instead of an error
         # if nothing matches), so this loop never crashes on a missing path.
-        found=$(compgen -G "${pattern}" 2>/dev/null | head -1)  # expand the glob, take the first hit
+        # expand the glob, take the first hit
+        found=$(compgen -G "${pattern}" 2>/dev/null | head -1)
         if [ -n "${found}" ] && [ -f "${found}" ]; then  # if we got a real, existing file...
             echo "${found}"                          # ...print it (the function's return value)...
             return 0                                 # ...and report success
         fi
     done
-    log_msg "WARNING: TruSeq3-PE-2.fa adapter file not found. Trimmomatic will skip adapter trimming."  # none found: warn but continue
+    # none found: warn but continue
+    log_msg "WARNING: TruSeq3-PE-2.fa adapter file not found. Trimmomatic will skip adapter trimming."
     echo ""                                          # print empty so the caller's $() is empty
     return 1                                          # signal not-found to the caller
 }
@@ -214,7 +242,8 @@ find_adapter_file() {
 
 log_msg "========== Checking required tools are on PATH =========="
 
-for TOOL in prefetch vdb-validate fasterq-dump fastqc trimmomatic fastp multiqc; do  # every executable this step depends on
+# every executable this step depends on
+for TOOL in prefetch vdb-validate fasterq-dump fastqc trimmomatic fastp multiqc; do
     require_tool "${TOOL}"                           # abort immediately if any one is missing
 done
 
@@ -226,10 +255,11 @@ log_msg "All required tools found."
 # Create every output directory this step writes to. mkdir -p is a no-op on
 # directories that already exist, so this is always safe to re-run.
 
+# create all output/log/checkpoint dirs in one call
 mkdir -p "${RAW_DIR}" "${FASTQC_PRE_DIR}" "${FASTQC_POST_DIR}" "${MULTIQC_DIR}" \
          "${TRIMMED_TRIMMOMATIC_DIR}" "${TRIMMED_FASTP_DIR}" \
          "${DEDUP_TRIMMOMATIC_DIR}" "${KRAKEN2_TRIMMOMATIC_DIR}" "${KRAKEN2_FASTP_DIR}" \
-         "${LOG_DIR}" "${CHECKPOINT_DIR}"            # create all output/log/checkpoint dirs in one call
+         "${LOG_DIR}" "${CHECKPOINT_DIR}"
 
 log_msg "Directory structure ready under: ${BASE_DIR}"
 
@@ -247,30 +277,34 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # process each accession in
 
     # Resume support: if both paired FASTQs already exist AND pass a gzip
     # integrity check, this sample is done -- don't re-download it.
+    # both mates present and intact?
     if [ -s "${RAW_DIR}/${SRR}_1.fastq.gz" ] && [ -s "${RAW_DIR}/${SRR}_2.fastq.gz" ] && \
-       is_valid_gz "${RAW_DIR}/${SRR}_1.fastq.gz" && is_valid_gz "${RAW_DIR}/${SRR}_2.fastq.gz"; then  # both mates present and intact?
+       is_valid_gz "${RAW_DIR}/${SRR}_1.fastq.gz" && is_valid_gz "${RAW_DIR}/${SRR}_2.fastq.gz"; then
         log_msg "FASTQs for ${SRR} already exist, skipping download."  # already done
         continue                                     # skip to the next accession
     fi
 
     # Step 1: pull the .sra file itself from NCBI's SRA archive.
     log_msg "Prefetching ${SRR}..."
+    # download the .sra, mirroring output to a per-sample log
     prefetch "${SRR}" \
         --output-directory "${RAW_DIR}" \
         --max-size 50G \
         --progress \
-        2>&1 | tee "${LOG_DIR}/${SRR}_prefetch.log"  # download the .sra, mirroring output to a per-sample log
+        2>&1 | tee "${LOG_DIR}/${SRR}_prefetch.log"
     check_exit "prefetch failed for ${SRR}"          # abort if the download failed
 
     # Step 2: verify the .sra download isn't corrupted/truncated before
     # spending time converting it; if it fails, force a clean re-download
     # once rather than converting a broken file.
     log_msg "Validating ${SRR}..."
-    vdb-validate "${RAW_DIR}/${SRR}/${SRR}.sra" 2>&1 | tee "${LOG_DIR}/${SRR}_validate.log"  # integrity-check the downloaded .sra
+    # integrity-check the downloaded .sra
+    vdb-validate "${RAW_DIR}/${SRR}/${SRR}.sra" 2>&1 | tee "${LOG_DIR}/${SRR}_validate.log"
     if [ $? -ne 0 ]; then                            # if validation failed...
         log_msg "WARNING: Validation failed for ${SRR}, attempting re-download..."  # ...warn...
         rm -rf "${RAW_DIR}/${SRR}"                   # ...remove the corrupt download...
-        prefetch "${SRR}" --output-directory "${RAW_DIR}" --max-size 50G --force ALL  # ...and force a clean re-download
+        # ...and force a clean re-download
+        prefetch "${SRR}" --output-directory "${RAW_DIR}" --max-size 50G --force ALL
         check_exit "Re-download failed for ${SRR}"   # abort if even the retry fails
     fi
 
@@ -278,12 +312,13 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # process each accession in
     # --split-3 separates mates into _1/_2 files plus a third file for any
     # unpaired/orphan reads (rather than interleaving or dropping them).
     log_msg "Converting ${SRR} to paired-end FASTQs..."
+    # extract paired FASTQs (_1/_2 + orphans) from the .sra
     fasterq-dump "${RAW_DIR}/${SRR}/${SRR}.sra" \
         --outdir "${RAW_DIR}" \
         --split-3 \
         --threads "${THREADS}" \
         --progress \
-        2>&1 | tee "${LOG_DIR}/${SRR}_fasterq.log"   # extract paired FASTQs (_1/_2 + orphans) from the .sra
+        2>&1 | tee "${LOG_DIR}/${SRR}_fasterq.log"
     check_exit "fasterq-dump failed for ${SRR}"      # abort if conversion failed
 
     # Step 4: fasterq-dump writes plain (uncompressed) FASTQ -- compress to
@@ -293,7 +328,8 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # process each accession in
     log_msg "Compressing FASTQs for ${SRR}..."
     gzip -f "${RAW_DIR}/${SRR}_1.fastq" 2>/dev/null  # compress the forward mate
     gzip -f "${RAW_DIR}/${SRR}_2.fastq" 2>/dev/null  # compress the reverse mate
-    gzip -f "${RAW_DIR}/${SRR}.fastq" 2>/dev/null    # compress orphan reads if present (silently skip if not)
+    # compress orphan reads if present (silently skip if not)
+    gzip -f "${RAW_DIR}/${SRR}.fastq" 2>/dev/null
 
     # Step 5: the raw .sra cache is no longer needed once FASTQs exist --
     # it's large and would otherwise sit around consuming disk space.
@@ -318,25 +354,28 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # QC each sample's raw read
     R2="${RAW_DIR}/${SRR}_2.fastq.gz"                # reverse-mate raw FASTQ
 
     # Can't QC a sample whose download didn't succeed/is corrupted.
-    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then  # skip missing/corrupt input
+    # skip missing/corrupt input
+    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then
         log_msg "WARNING: Paired FASTQs not found or corrupted for ${SRR}, skipping pre-QC."
         continue
     fi
 
     # Resume support: FastQC's own HTML report existing means this sample
     # is already done.
-    if [ -s "${FASTQC_PRE_DIR}/${SRR}_1_fastqc.html" ] && [ -s "${FASTQC_PRE_DIR}/${SRR}_2_fastqc.html" ]; then  # both reports already present?
+    # both reports already present?
+    if [ -s "${FASTQC_PRE_DIR}/${SRR}_1_fastqc.html" ] && [ -s "${FASTQC_PRE_DIR}/${SRR}_2_fastqc.html" ]; then
         log_msg "Pre-trim FastQC for ${SRR} already exists, skipping."
         continue
     fi
 
     log_msg "Running FastQC (pre-trimming) on ${SRR}..."
+    # QC both raw mates, logging to a per-sample file
     fastqc \
         "${R1}" "${R2}" \
         --outdir "${FASTQC_PRE_DIR}" \
         --threads "${THREADS}" \
         --quiet \
-        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_pre.log"  # QC both raw mates, logging to a per-sample file
+        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_pre.log"
     check_exit "FastQC (pre-trimming) failed for ${SRR}"  # abort on FastQC failure
 
     log_msg "Pre-trimming FastQC completed for ${SRR}"
@@ -353,7 +392,8 @@ log_msg "========== Trimming reads with Trimmomatic =========="
 
 # Locate the adapter FASTA once, outside the per-sample loop -- it's the
 # same file for every sample.
-ADAPTER_FILE=$(find_adapter_file)                    # resolve the TruSeq3 adapter path once for all samples
+# resolve the TruSeq3 adapter path once for all samples
+ADAPTER_FILE=$(find_adapter_file)
 
 for SRR in "${SRR_ACCESSIONS[@]}"; do                # trim each sample with Trimmomatic
     R1="${RAW_DIR}/${SRR}_1.fastq.gz"                # forward-mate raw FASTQ
@@ -362,20 +402,26 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # trim each sample with Tri
     # Trimmomatic PE produces 4 output files: paired + unpaired reads for
     # each of the two mates (a read can lose its partner during trimming if
     # the partner is discarded but this one survives).
-    R1_PAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_paired.fastq.gz"    # forward reads whose mate also survived
-    R1_UNPAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_unpaired.fastq.gz"  # forward reads whose mate was dropped
-    R2_PAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_paired.fastq.gz"    # reverse reads whose mate also survived
-    R2_UNPAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_unpaired.fastq.gz"  # reverse reads whose mate was dropped
+    # forward reads whose mate also survived
+    R1_PAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_paired.fastq.gz"
+    # forward reads whose mate was dropped
+    R1_UNPAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_unpaired.fastq.gz"
+    # reverse reads whose mate also survived
+    R2_PAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_paired.fastq.gz"
+    # reverse reads whose mate was dropped
+    R2_UNPAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_unpaired.fastq.gz"
 
-    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then  # skip missing/corrupt input
+    # skip missing/corrupt input
+    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then
         log_msg "WARNING: Paired FASTQs not found or corrupted for ${SRR}, skipping Trimmomatic."
         continue
     fi
 
     # Resume support: valid paired output already present means this
     # sample's Trimmomatic run already succeeded.
+    # both paired outputs present and intact?
     if [ -s "${R1_PAIRED}" ] && [ -s "${R2_PAIRED}" ] && \
-       is_valid_gz "${R1_PAIRED}" && is_valid_gz "${R2_PAIRED}"; then  # both paired outputs present and intact?
+       is_valid_gz "${R1_PAIRED}" && is_valid_gz "${R2_PAIRED}"; then
         log_msg "Trimmomatic output for ${SRR} already exists, skipping."
         continue
     fi
@@ -385,22 +431,29 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # trim each sample with Tri
     # Build the trimming step list: adapter clipping only if we actually
     # found an adapter file, then the four quality/length filters from the
     # CONFIGURATION section, in Trimmomatic's required order.
-    TRIM_STEPS=""                                    # accumulate Trimmomatic's ordered trimming steps here
-    if [ -n "${ADAPTER_FILE}" ] && [ -f "${ADAPTER_FILE}" ]; then  # only add adapter clipping if the adapter file exists
+    # accumulate Trimmomatic's ordered trimming steps here
+    TRIM_STEPS=""
+    # only add adapter clipping if the adapter file exists
+    if [ -n "${ADAPTER_FILE}" ] && [ -f "${ADAPTER_FILE}" ]; then
         # 2:30:10:2:True -- Trimmomatic's own recommended ILLUMINACLIP
         # parameters for paired-end TruSeq3 data (seed mismatches:
         # palindrome/simple clip score thresholds: min adapter length:
         # keep both reads of a palindrome match).
-        TRIM_STEPS="ILLUMINACLIP:${ADAPTER_FILE}:2:30:10:2:True "  # adapter-clip step (recommended TruSeq3 PE params)
+        # adapter-clip step (recommended TruSeq3 PE params)
+        TRIM_STEPS="ILLUMINACLIP:${ADAPTER_FILE}:2:30:10:2:True "
     fi
-    TRIM_STEPS+="LEADING:${TRIM_LEADING} TRAILING:${TRIM_TRAILING} "  # append leading/trailing edge trims
+    # append leading/trailing edge trims
+    TRIM_STEPS+="LEADING:${TRIM_LEADING} TRAILING:${TRIM_TRAILING} "
     TRIM_STEPS+="SLIDINGWINDOW:${TRIM_SLIDINGWINDOW} "  # append the 4bp/Q15 sliding-window trim
-    TRIM_STEPS+="AVGQUAL:${TRIM_AVGQUAL} "           # append the whole-read Q15 average-quality gate
-    TRIM_STEPS+="MINLEN:${TRIM_MINLEN}"              # append the 50bp minimum-length filter (must come last)
+    # append the whole-read Q15 average-quality gate
+    TRIM_STEPS+="AVGQUAL:${TRIM_AVGQUAL} "
+    # append the 50bp minimum-length filter (must come last)
+    TRIM_STEPS+="MINLEN:${TRIM_MINLEN}"
 
     # -Xmx48g: the bioconda wrapper's default 1GB Java heap crashes on
     # datasets this size; -phred33 matches modern Illumina quality encoding;
     # -summary writes a per-sample trimming-stats file MultiQC can parse.
+    # run Trimmomatic PE with the built step list, logging output
     trimmomatic PE \
         -Xmx48g \
         -threads "${THREADS}" \
@@ -410,7 +463,7 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # trim each sample with Tri
         "${R1_PAIRED}" "${R1_UNPAIRED}" \
         "${R2_PAIRED}" "${R2_UNPAIRED}" \
         ${TRIM_STEPS} \
-        2>&1 | tee "${LOG_DIR}/${SRR}_trimmomatic.log"  # run Trimmomatic PE with the built step list, logging output
+        2>&1 | tee "${LOG_DIR}/${SRR}_trimmomatic.log"
     check_exit "Trimmomatic failed for ${SRR}"       # abort on Trimmomatic failure
 
     log_msg "Trimmomatic completed for ${SRR}"
@@ -432,21 +485,25 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # trim each sample independ
 
     R1_OUT="${TRIMMED_FASTP_DIR}/${SRR}_1.trimmed.fastq.gz"  # fastp's trimmed forward mate
     R2_OUT="${TRIMMED_FASTP_DIR}/${SRR}_2.trimmed.fastq.gz"  # fastp's trimmed reverse mate
-    JSON_OUT="${TRIMMED_FASTP_DIR}/${SRR}_fastp.json"   # machine-readable report -- what the fastp MultiQC report is built from
+    # machine-readable report -- what the fastp MultiQC report is built from
+    JSON_OUT="${TRIMMED_FASTP_DIR}/${SRR}_fastp.json"
     HTML_OUT="${TRIMMED_FASTP_DIR}/${SRR}_fastp.html"   # human-readable per-sample report
 
-    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then  # skip missing/corrupt input
+    # skip missing/corrupt input
+    if [ ! -s "${R1}" ] || [ ! -s "${R2}" ] || ! is_valid_gz "${R1}" || ! is_valid_gz "${R2}"; then
         log_msg "WARNING: Paired FASTQs not found or corrupted for ${SRR}, skipping fastp."
         continue
     fi
 
     # Resume support: same pattern as the Trimmomatic loop above.
-    if [ -s "${R1_OUT}" ] && [ -s "${R2_OUT}" ] && is_valid_gz "${R1_OUT}" && is_valid_gz "${R2_OUT}"; then  # both outputs present and intact?
+    # both outputs present and intact?
+    if [ -s "${R1_OUT}" ] && [ -s "${R2_OUT}" ] && is_valid_gz "${R1_OUT}" && is_valid_gz "${R2_OUT}"; then
         log_msg "fastp output for ${SRR} already exists, skipping."
         continue
     fi
 
     log_msg "Running fastp on ${SRR}..."
+    # trim + dedup with the shared Q15/len50 bar; emit JSON/HTML reports
     fastp \
         -i "${R1}" -I "${R2}" \
         -o "${R1_OUT}" -O "${R2_OUT}" \
@@ -456,7 +513,7 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # trim each sample independ
         --dedup \
         --json "${JSON_OUT}" --html "${HTML_OUT}" \
         --thread "${THREADS}" \
-        2>&1 | tee "${LOG_DIR}/${SRR}_fastp.log"     # trim + dedup with the shared Q15/len50 bar; emit JSON/HTML reports
+        2>&1 | tee "${LOG_DIR}/${SRR}_fastp.log"
     check_exit "fastp failed for ${SRR}"             # abort on fastp failure
     # Notes on the flags above:
     #   --cut_right ... : fastp's equivalent of Trimmomatic's SLIDINGWINDOW
@@ -491,23 +548,26 @@ for SRR in "${SRR_ACCESSIONS[@]}"; do                # QC each sample's Trimmoma
     R1_PAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_paired.fastq.gz"  # trimmed forward paired reads
     R2_PAIRED="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_paired.fastq.gz"  # trimmed reverse paired reads
 
-    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then  # skip missing/corrupt input
+    # skip missing/corrupt input
+    if [ ! -s "${R1_PAIRED}" ] || [ ! -s "${R2_PAIRED}" ] || ! is_valid_gz "${R1_PAIRED}" || ! is_valid_gz "${R2_PAIRED}"; then
         log_msg "WARNING: Trimmomatic output not found or corrupted for ${SRR}, skipping post-QC."
         continue
     fi
 
-    if [ -s "${FASTQC_POST_DIR}/${SRR}_1_paired_fastqc.html" ] && [ -s "${FASTQC_POST_DIR}/${SRR}_2_paired_fastqc.html" ]; then  # both post-trim reports already present?
+    # both post-trim reports already present?
+    if [ -s "${FASTQC_POST_DIR}/${SRR}_1_paired_fastqc.html" ] && [ -s "${FASTQC_POST_DIR}/${SRR}_2_paired_fastqc.html" ]; then
         log_msg "Post-trim FastQC for ${SRR} already exists, skipping."
         continue
     fi
 
     log_msg "Running FastQC (post-trimming) on ${SRR}..."
+    # QC the trimmed reads for a before/after comparison
     fastqc \
         "${R1_PAIRED}" "${R2_PAIRED}" \
         --outdir "${FASTQC_POST_DIR}" \
         --threads "${THREADS}" \
         --quiet \
-        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_post.log"  # QC the trimmed reads for a before/after comparison
+        2>&1 | tee "${LOG_DIR}/${SRR}_fastqc_post.log"
     check_exit "FastQC (post-trimming) failed for ${SRR}"  # abort on FastQC failure
 
     log_msg "Post-trimming FastQC completed for ${SRR}"
@@ -524,26 +584,28 @@ done
 
 log_msg "========== Aggregating FastQC + Trimmomatic QC with MultiQC =========="
 
+# aggregate pre/post FastQC + Trimmomatic logs into one report
 multiqc \
     "${FASTQC_PRE_DIR}" "${FASTQC_POST_DIR}" "${LOG_DIR}" \
     --outdir "${MULTIQC_DIR}" \
     --filename "fastqc_trimmomatic_report" \
     --title "PRJNA207834 - Illumina FastQC + Trimmomatic Summary (HIV-1 Uganda A1/D)" \
     --force \
-    2>&1 | tee "${LOG_DIR}/multiqc_fastqc_trimmomatic.log"  # aggregate pre/post FastQC + Trimmomatic logs into one report
+    2>&1 | tee "${LOG_DIR}/multiqc_fastqc_trimmomatic.log"
 check_exit "MultiQC (FastQC + Trimmomatic) failed"   # abort if aggregation failed
 
 log_msg "MultiQC report generated: ${MULTIQC_DIR}/fastqc_trimmomatic_report.html"
 
 log_msg "========== Aggregating fastp reports with MultiQC =========="
 
+# aggregate fastp's own JSON reports into a separate report
 multiqc \
     "${TRIMMED_FASTP_DIR}" \
     --outdir "${MULTIQC_DIR}" \
     --filename "fastp_report" \
     --title "PRJNA207834 - Illumina fastp Summary (HIV-1 Uganda A1/D)" \
     --force \
-    2>&1 | tee "${LOG_DIR}/multiqc_fastp.log"        # aggregate fastp's own JSON reports into a separate report
+    2>&1 | tee "${LOG_DIR}/multiqc_fastp.log"
 check_exit "MultiQC (fastp) failed"                  # abort if aggregation failed
 
 log_msg "MultiQC report generated: ${MULTIQC_DIR}/fastp_report.html"
@@ -568,55 +630,79 @@ log_msg "MultiQC report generated: ${MULTIQC_DIR}/fastp_report.html"
 log_msg "========== STEP 1h: Deduplication + Kraken2 contamination filtering =========="
 
 if [ ! -s "${KRAKEN2_DB}/nodes.dmp" ]; then          # if the Kraken2 DB isn't present...
-    log_msg "WARNING: Kraken2 database not found at ${KRAKEN2_DB} -- skipping dedup+Kraken2 filtering. Download it first (see data/reference/kraken2_standard_16gb_db/SOURCE.md)."  # ...warn and skip this whole block
+    # ...warn and skip this whole block
+    log_msg "WARNING: Kraken2 database not found at ${KRAKEN2_DB} -- skipping dedup+Kraken2 filtering. Download it first (see data/reference/kraken2_standard_16gb_db/SOURCE.md)."
 else
     for SRR in "${SRR_ACCESSIONS[@]}"; do            # process both trimmer tracks per sample
         # --- Trimmomatic track: dedup first (fastp --dedup-only pass), then Kraken2 ---
-        TRIMMOMATIC_R1="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_paired.fastq.gz"  # Trimmomatic forward paired reads
-        TRIMMOMATIC_R2="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_paired.fastq.gz"  # Trimmomatic reverse paired reads
-        DEDUP_R1="${DEDUP_TRIMMOMATIC_DIR}/${SRR}_1.dedup.fastq.gz"  # deduped forward mate for this track
-        DEDUP_R2="${DEDUP_TRIMMOMATIC_DIR}/${SRR}_2.dedup.fastq.gz"  # deduped reverse mate for this track
+        # Trimmomatic forward paired reads
+        TRIMMOMATIC_R1="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_1_paired.fastq.gz"
+        # Trimmomatic reverse paired reads
+        TRIMMOMATIC_R2="${TRIMMED_TRIMMOMATIC_DIR}/${SRR}_2_paired.fastq.gz"
+        # deduped forward mate for this track
+        DEDUP_R1="${DEDUP_TRIMMOMATIC_DIR}/${SRR}_1.dedup.fastq.gz"
+        # deduped reverse mate for this track
+        DEDUP_R2="${DEDUP_TRIMMOMATIC_DIR}/${SRR}_2.dedup.fastq.gz"
 
-        if [ -s "${TRIMMOMATIC_R1}" ] && [ -s "${TRIMMOMATIC_R2}" ] && is_valid_gz "${TRIMMOMATIC_R1}" && is_valid_gz "${TRIMMOMATIC_R2}"; then  # only proceed with intact Trimmomatic output
-            if [ ! -s "${DEDUP_R1}" ] || [ ! -s "${DEDUP_R2}" ] || ! is_valid_gz "${DEDUP_R1}" || ! is_valid_gz "${DEDUP_R2}"; then  # skip dedup if a valid deduped pair already exists
+        # only proceed with intact Trimmomatic output
+        if [ -s "${TRIMMOMATIC_R1}" ] && [ -s "${TRIMMOMATIC_R2}" ] && is_valid_gz "${TRIMMOMATIC_R1}" && is_valid_gz "${TRIMMOMATIC_R2}"; then
+            # skip dedup if a valid deduped pair already exists
+            if [ ! -s "${DEDUP_R1}" ] || [ ! -s "${DEDUP_R2}" ] || ! is_valid_gz "${DEDUP_R1}" || ! is_valid_gz "${DEDUP_R2}"; then
                 log_msg "Deduplicating Trimmomatic output for ${SRR}..."
+                # run the fastp dedup-only wrapper on Trimmomatic's output
                 bash "${BASE_DIR}/scripts/utils/fastp_dedup.sh" \
                     "${TRIMMOMATIC_R1}" "${TRIMMOMATIC_R2}" "${DEDUP_R1}" "${DEDUP_R2}" \
                     "${DEDUP_TRIMMOMATIC_DIR}/${SRR}_dedup_fastp" \
-                    2>&1 | tee "${LOG_DIR}/${SRR}_dedup_trimmomatic.log"  # run the fastp dedup-only wrapper on Trimmomatic's output
-                check_exit "fastp dedup (Trimmomatic track) failed for ${SRR}"  # abort on dedup failure
+                    2>&1 | tee "${LOG_DIR}/${SRR}_dedup_trimmomatic.log"
+                # abort on dedup failure
+                check_exit "fastp dedup (Trimmomatic track) failed for ${SRR}"
             fi
 
-            if [ -s "${DEDUP_R1}" ] && [ -s "${DEDUP_R2}" ]; then  # only run Kraken2 if the deduped pair exists
-                KRAKEN_R1_OUT="${KRAKEN2_TRIMMOMATIC_DIR}/${SRR}_1.kraken_filtered.fastq.gz"  # host-removed forward mate
-                KRAKEN_R2_OUT="${KRAKEN2_TRIMMOMATIC_DIR}/${SRR}_2.kraken_filtered.fastq.gz"  # host-removed reverse mate
-                if [ ! -s "${KRAKEN_R1_OUT}" ] || [ ! -s "${KRAKEN_R2_OUT}" ]; then  # skip if already filtered
+            # only run Kraken2 if the deduped pair exists
+            if [ -s "${DEDUP_R1}" ] && [ -s "${DEDUP_R2}" ]; then
+                # host-removed forward mate
+                KRAKEN_R1_OUT="${KRAKEN2_TRIMMOMATIC_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
+                # host-removed reverse mate
+                KRAKEN_R2_OUT="${KRAKEN2_TRIMMOMATIC_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+                # skip if already filtered
+                if [ ! -s "${KRAKEN_R1_OUT}" ] || [ ! -s "${KRAKEN_R2_OUT}" ]; then
                     log_msg "Running Kraken2 (Trimmomatic track) on ${SRR}..."
+                    # drop host/bacterial reads from the deduped Trimmomatic pair
                     bash "${BASE_DIR}/scripts/utils/kraken2_filter_reads.sh" \
                         "${DEDUP_R1}" "${DEDUP_R2}" "${KRAKEN2_TRIMMOMATIC_DIR}" "${SRR}" "${KRAKEN2_DB}" \
-                        2>&1 | tee "${LOG_DIR}/${SRR}_kraken2_trimmomatic.log"  # drop host/bacterial reads from the deduped Trimmomatic pair
-                    check_exit "Kraken2 (Trimmomatic track) failed for ${SRR}"  # abort on Kraken2 failure
+                        2>&1 | tee "${LOG_DIR}/${SRR}_kraken2_trimmomatic.log"
+                    # abort on Kraken2 failure
+                    check_exit "Kraken2 (Trimmomatic track) failed for ${SRR}"
                 fi
             fi
         else
-            log_msg "WARNING: Trimmomatic output not found for ${SRR}, skipping its dedup+Kraken2 pass."  # nothing to filter for this track
+            # nothing to filter for this track
+            log_msg "WARNING: Trimmomatic output not found for ${SRR}, skipping its dedup+Kraken2 pass."
         fi
 
         # --- fastp track: already deduplicated above, straight to Kraken2 ---
-        FASTP_R1="${TRIMMED_FASTP_DIR}/${SRR}_1.trimmed.fastq.gz"  # fastp trimmed+deduped forward mate
-        FASTP_R2="${TRIMMED_FASTP_DIR}/${SRR}_2.trimmed.fastq.gz"  # fastp trimmed+deduped reverse mate
-        if [ -s "${FASTP_R1}" ] && [ -s "${FASTP_R2}" ] && is_valid_gz "${FASTP_R1}" && is_valid_gz "${FASTP_R2}"; then  # only proceed with intact fastp output
-            KRAKEN_R1_OUT="${KRAKEN2_FASTP_DIR}/${SRR}_1.kraken_filtered.fastq.gz"  # host-removed forward mate (fastp track)
-            KRAKEN_R2_OUT="${KRAKEN2_FASTP_DIR}/${SRR}_2.kraken_filtered.fastq.gz"  # host-removed reverse mate (fastp track)
-            if [ ! -s "${KRAKEN_R1_OUT}" ] || [ ! -s "${KRAKEN_R2_OUT}" ]; then  # skip if already filtered
+        # fastp trimmed+deduped forward mate
+        FASTP_R1="${TRIMMED_FASTP_DIR}/${SRR}_1.trimmed.fastq.gz"
+        # fastp trimmed+deduped reverse mate
+        FASTP_R2="${TRIMMED_FASTP_DIR}/${SRR}_2.trimmed.fastq.gz"
+        # only proceed with intact fastp output
+        if [ -s "${FASTP_R1}" ] && [ -s "${FASTP_R2}" ] && is_valid_gz "${FASTP_R1}" && is_valid_gz "${FASTP_R2}"; then
+            # host-removed forward mate (fastp track)
+            KRAKEN_R1_OUT="${KRAKEN2_FASTP_DIR}/${SRR}_1.kraken_filtered.fastq.gz"
+            # host-removed reverse mate (fastp track)
+            KRAKEN_R2_OUT="${KRAKEN2_FASTP_DIR}/${SRR}_2.kraken_filtered.fastq.gz"
+            # skip if already filtered
+            if [ ! -s "${KRAKEN_R1_OUT}" ] || [ ! -s "${KRAKEN_R2_OUT}" ]; then
                 log_msg "Running Kraken2 (fastp track) on ${SRR}..."
+                # drop host/bacterial reads from the fastp pair (production input)
                 bash "${BASE_DIR}/scripts/utils/kraken2_filter_reads.sh" \
                     "${FASTP_R1}" "${FASTP_R2}" "${KRAKEN2_FASTP_DIR}" "${SRR}" "${KRAKEN2_DB}" \
-                    2>&1 | tee "${LOG_DIR}/${SRR}_kraken2_fastp.log"  # drop host/bacterial reads from the fastp pair (production input)
+                    2>&1 | tee "${LOG_DIR}/${SRR}_kraken2_fastp.log"
                 check_exit "Kraken2 (fastp track) failed for ${SRR}"  # abort on Kraken2 failure
             fi
         else
-            log_msg "WARNING: fastp output not found for ${SRR}, skipping its Kraken2 pass."  # nothing to filter for this track
+            # nothing to filter for this track
+            log_msg "WARNING: fastp output not found for ${SRR}, skipping its Kraken2 pass."
         fi
 
         log_msg "Deduplication + Kraken2 filtering completed for ${SRR}"

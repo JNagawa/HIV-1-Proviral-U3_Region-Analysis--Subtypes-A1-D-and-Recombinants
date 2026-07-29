@@ -23,30 +23,38 @@
 #                 name  orig_len  lead_N  trail_N  provirus_len  prov_start  prov_end  status
 #                 (prov_start/prov_end are 1-based, inclusive, in original
 #                 read coordinates; status = kept | dropped_all_N | dropped_empty)
-set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
+# -u errors on unset vars, pipefail fails a pipe if any stage fails
+set -uo pipefail
 
-IN="${1:?usage: extract_provirus_strip_hostN.sh <in.fasta[.gz]> <out.fasta> [coords.tsv]}"  # arg 1 = host-N-masked input; :? prints usage and aborts if missing
+# arg 1 = host-N-masked input; :? prints usage and aborts if missing
+IN="${1:?usage: extract_provirus_strip_hostN.sh <in.fasta[.gz]> <out.fasta> [coords.tsv]}"
 OUT="${2:?missing output FASTA path}"                # arg 2 = where to write the proviral cores
-COORDS="${3:-}"                                      # arg 3 = optional coords/provenance TSV (empty if not given)
+# arg 3 = optional coords/provenance TSV (empty if not given)
+COORDS="${3:-}"
 
 if [ ! -s "${IN}" ]; then                            # nothing to do without a non-empty input...
     echo "ERROR: input '${IN}' not found or empty." >&2  # ...report the problem...
     exit 1                                           # ...and fail
 fi
-if ! command -v seqkit >/dev/null 2>&1; then         # seqkit does the FASTA linearise/re-wrap, so it must be present
-    echo "ERROR: seqkit not on PATH (conda activate HIV_U3analysis)." >&2  # tell the user how to get it
+# seqkit does the FASTA linearise/re-wrap, so it must be present
+if ! command -v seqkit >/dev/null 2>&1; then
+    # tell the user how to get it
+    echo "ERROR: seqkit not on PATH (conda activate HIV_U3analysis)." >&2
     exit 1                                           # fail if it's missing
 fi
 
 mkdir -p "$(dirname "${OUT}")"                       # make sure the output dir exists
-[ -n "${COORDS}" ] && mkdir -p "$(dirname "${COORDS}")"  # and the coords dir too, only if a coords path was given
+# and the coords dir too, only if a coords path was given
+[ -n "${COORDS}" ] && mkdir -p "$(dirname "${COORDS}")"
 
 # fx2tab emits "name<TAB>sequence" (one line per record, sequence linearised).
 # -w0 (in tab2fx below) disables line wrapping so downstream length checks are
 # unambiguous. Case-insensitive N-stripping ([Nn]) covers masks written in
 # either case. The core is bases [lead+1 .. len-trail] of the original read.
-TMP_TAB="$(mktemp)"                                  # scratch file (reserved for temp work; cleaned on exit)
-trap 'rm -f "${TMP_TAB}"' EXIT                       # always remove the temp file when the script exits
+# scratch file (reserved for temp work; cleaned on exit)
+TMP_TAB="$(mktemp)"
+# always remove the temp file when the script exits
+trap 'rm -f "${TMP_TAB}"' EXIT
 
 seqkit fx2tab "${IN}" 2>/dev/null | awk -F'\t' -v coords="${COORDS}" '  # linearise each record to name<TAB>seq, then strip N-flanks in awk
     {
@@ -88,12 +96,18 @@ seqkit fx2tab "${IN}" 2>/dev/null | awk -F'\t' -v coords="${COORDS}" '  # linear
 
 # Prepend the coords header (awk appended rows without one, so it stays
 # valid even when run per-record above).
-if [ -n "${COORDS}" ] && [ -f "${COORDS}" ]; then    # only if a coords file was requested and actually got written
-    HDR="name\torig_len\tlead_N\ttrail_N\tprovirus_len\tprov_start\tprov_end\tstatus"  # the column header for the coords TSV
+# only if a coords file was requested and actually got written
+if [ -n "${COORDS}" ] && [ -f "${COORDS}" ]; then
+    # the column header for the coords TSV
+    HDR="name\torig_len\tlead_N\ttrail_N\tprovirus_len\tprov_start\tprov_end\tstatus"
     TMP_C="$(mktemp)"                                # scratch file to prepend the header
-    { printf "%b\n" "${HDR}"; cat "${COORDS}"; } > "${TMP_C}" && mv "${TMP_C}" "${COORDS}"  # write header then existing rows, then swap it in
+    # write header then existing rows, then swap it in
+    { printf "%b\n" "${HDR}"; cat "${COORDS}"; } > "${TMP_C}" && mv "${TMP_C}" "${COORDS}"
 fi
 
-N_IN=$(seqkit stats -T "${IN}" 2>/dev/null | awk -F'\t' 'NR==2{print $4}')   # number of input records (num_seqs column)
-N_OUT=$(seqkit stats -T "${OUT}" 2>/dev/null | awk -F'\t' 'NR==2{print $4}') # number of output records that kept a core
-echo "extract_provirus_strip_hostN: ${N_OUT:-0}/${N_IN:-0} records had a non-empty proviral core -> ${OUT}" >&2  # summary line to stderr
+# number of input records (num_seqs column)
+N_IN=$(seqkit stats -T "${IN}" 2>/dev/null | awk -F'\t' 'NR==2{print $4}')
+# number of output records that kept a core
+N_OUT=$(seqkit stats -T "${OUT}" 2>/dev/null | awk -F'\t' 'NR==2{print $4}')
+# summary line to stderr
+echo "extract_provirus_strip_hostN: ${N_OUT:-0}/${N_IN:-0} records had a non-empty proviral core -> ${OUT}" >&2

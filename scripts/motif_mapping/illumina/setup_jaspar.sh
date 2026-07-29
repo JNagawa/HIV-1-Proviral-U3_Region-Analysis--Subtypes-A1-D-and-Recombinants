@@ -11,37 +11,51 @@
 #   NFAT (NFATC2):     MA0152.3
 #   AP-1 (FOS::JUN):   MA0099.4
 #   TBP:               MA0108.3
-set -euo pipefail                                    # -e exit on error, -u error on unset vars, pipefail catch pipeline failures
-STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"            # absolute path of this script's dir, so it runs from anywhere
-REPO_ROOT="$(cd "${STAGE_DIR}/../.." && pwd)"         # repo top-level (two dirs up), base for the reference path
+# -e exit on error, -u error on unset vars, pipefail catch pipeline failures
+set -euo pipefail
+# absolute path of this script's dir, so it runs from anywhere
+STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
+# repo top-level (two dirs up), base for the reference path
+REPO_ROOT="$(cd "${STAGE_DIR}/../.." && pwd)"
 mkdir -p "${REPO_ROOT}/data/reference/jaspar"         # ensure the JASPAR download dir exists
-cd "${REPO_ROOT}/data/reference/jaspar"               # work inside it so all outputs land there with plain names
+# work inside it so all outputs land there with plain names
+cd "${REPO_ROOT}/data/reference/jaspar"
 
-MATRIX_IDS="MA0107.1 MA0105.4 MA0079.5 MA0152.3 MA0099.4 MA0108.3"  # the six core-TF JASPAR matrix IDs (see header)
+# the six core-TF JASPAR matrix IDs (see header)
+MATRIX_IDS="MA0107.1 MA0105.4 MA0079.5 MA0152.3 MA0099.4 MA0108.3"
 
-> core6_pfms.meme                                     # truncate/create the combined MEME file before appending
-FIRST=1                                               # flag: first matrix keeps the MEME header, rest are appended headerless
+# truncate/create the combined MEME file before appending
+> core6_pfms.meme
+# flag: first matrix keeps the MEME header, rest are appended headerless
+FIRST=1
 for id in ${MATRIX_IDS}; do                           # download each matrix in MEME format
-    if [ "${FIRST}" = "1" ]; then                     # first matrix: take the whole response (includes the MEME header)
-        curl -s -H "Accept: text/meme" "https://jaspar.elixir.no/api/v1/matrix/${id}/" > core6_pfms.meme  # fetch and write full MEME (header + motif)
+    # first matrix: take the whole response (includes the MEME header)
+    if [ "${FIRST}" = "1" ]; then
+        # fetch and write full MEME (header + motif)
+        curl -s -H "Accept: text/meme" "https://jaspar.elixir.no/api/v1/matrix/${id}/" > core6_pfms.meme
         FIRST=0                                       # subsequent matrices skip the header
     else
         # append only the MOTIF block (skip the repeated MEME header) for
         # subsequent matrices, so the file is one valid multi-motif MEME file
+        # print from the first MOTIF line onward, dropping the duplicate header
         curl -s -H "Accept: text/meme" "https://jaspar.elixir.no/api/v1/matrix/${id}/" | \
-            awk '/^MOTIF/{p=1} p' >> core6_pfms.meme  # print from the first MOTIF line onward, dropping the duplicate header
+            awk '/^MOTIF/{p=1} p' >> core6_pfms.meme
     fi
 done
-echo "Wrote $(grep -c '^MOTIF' core6_pfms.meme) motifs to data/reference/jaspar/core6_pfms.meme (for FIMO)"  # report how many motifs landed in the combined file
+# report how many motifs landed in the combined file
+echo "Wrote $(grep -c '^MOTIF' core6_pfms.meme) motifs to data/reference/jaspar/core6_pfms.meme (for FIMO)"
 
 # Raw JASPAR-format flat file (for TFBSTools::readJASPARMatrix and, split
 # per-matrix below, for MOODS).
+# download the full CORE vertebrates flat file; retry without the Accept header if the first attempt
+# fails
 curl -s -H "Accept: text/plain" \
     "https://jaspar.elixir.no/download/data/2024/CORE/JASPAR2024_CORE_vertebrates_non-redundant_pfms_jaspar.txt" \
     -o all_vertebrates_pfms.jaspar 2>/dev/null || \
 curl -s "https://jaspar.elixir.no/download/data/2024/CORE/JASPAR2024_CORE_vertebrates_non-redundant_pfms_jaspar.txt" \
-    -o all_vertebrates_pfms.jaspar                    # download the full CORE vertebrates flat file; retry without the Accept header if the first attempt fails
-echo "Wrote all_vertebrates_pfms.jaspar ($(grep -c '^>' all_vertebrates_pfms.jaspar) motifs, full CORE vertebrates set)"  # report the total motif count (>-lines) downloaded
+    -o all_vertebrates_pfms.jaspar
+# report the total motif count (>-lines) downloaded
+echo "Wrote all_vertebrates_pfms.jaspar ($(grep -c '^>' all_vertebrates_pfms.jaspar) motifs, full CORE vertebrates set)"
 
 # Split the 6 core matrices into individual .pfm files (4 lines of counts,
 # no header) for MOODS, which expects one matrix per file. JASPAR raw format
@@ -91,5 +105,7 @@ END {
     close(combined)                                    # flush the combined file
 }
 ' all_vertebrates_pfms.jaspar                          # feed the full downloaded flat file into the awk program above
-echo "Wrote per-matrix .pfm files for MOODS: $(ls MA*.pfm 2>/dev/null | wc -l) files"  # report how many per-matrix .pfm files were produced
-echo "Wrote data/reference/jaspar/core6_pfms.jaspar for TFBSTools"  # confirm the combined TFBSTools input was written
+# report how many per-matrix .pfm files were produced
+echo "Wrote per-matrix .pfm files for MOODS: $(ls MA*.pfm 2>/dev/null | wc -l) files"
+# confirm the combined TFBSTools input was written
+echo "Wrote data/reference/jaspar/core6_pfms.jaspar for TFBSTools"

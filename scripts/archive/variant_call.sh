@@ -12,7 +12,7 @@
 ## This bash script automates comparative variant analysis workflow for two strains of a selected microorganism.
 #It performs all key steps, including, downloading reference genomes and raw sequencing reads, quality checks,
 # aligning reads, calling variants, annotating them, and identifying unique and shared missense SNPs between strains.
-## NOTE: Ensure this script is executed on a system with Anaconda, Miniconda or an equivalent Python distribution. / 
+## NOTE: Ensure this script is executed on a system with Anaconda, Miniconda or an equivalent Python distribution. /
 # Create an environment using the provided .yml file to ensure that all required channels and dependencies are installed /
 # before running this script.
 
@@ -23,7 +23,8 @@
 # 3.	Kirunda Jeremy Menya       2500725995		2025/HD07/25995U
 
 # Activate conda environment
-source "$(conda info --base)/etc/profile.d/conda.sh"  # load conda's init script so `conda activate` works
+# load conda's init script so `conda activate` works
+source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate variant_calling  # activate the env holding bwa/samtools/bcftools/snpEff
 
 if [ "$#" -ne 1 ]; then  # require exactly one argument: the accession-list file
@@ -33,8 +34,10 @@ fi
 
 # Setting up to capture errors in commands, functions and pipelines
 set -eEuo pipefail  # strict mode: exit on error/unset var/pipe failure, inherit ERR trap
-trap 'echo "Pipeline finished at $(date)"' EXIT  # always print a finish line whenever the script exits
-trap 'echo "ERROR at $(date) in ${FUNCNAME[0]:-main}: \"$BASH_COMMAND\" at line ${LINENO}" >&2; exit 1' ERR  # on any error, log the location and command, then exit 1
+# always print a finish line whenever the script exits
+trap 'echo "Pipeline finished at $(date)"' EXIT
+# on any error, log the location and command, then exit 1
+trap 'echo "ERROR at $(date) in ${FUNCNAME[0]:-main}: \"$BASH_COMMAND\" at line ${LINENO}" >&2; exit 1' ERR
 
 # logging errors in log files inside logs directory
 mkdir -p logs  # ensure logs dir exists before we redirect output into it
@@ -46,7 +49,8 @@ STDERR_LOG="logs/pipeline_stderr_${TIMESTAMP}.log"  # path for this run's stderr
 COMBINED_LOG="logs/pipeline_combined_${TIMESTAMP}.log"  # path for the merged stdout+stderr log
 
 # Redirect stdout and stderr to separate log files and to a single combined log file
-exec > >(tee -a "$STDOUT_LOG" "$COMBINED_LOG") 2> >(tee -a "$STDERR_LOG" "$COMBINED_LOG" >&2)  # mirror stdout/stderr to the console and to the log files
+# mirror stdout/stderr to the console and to the log files
+exec > >(tee -a "$STDOUT_LOG" "$COMBINED_LOG") 2> >(tee -a "$STDERR_LOG" "$COMBINED_LOG" >&2)
 
 
 # Indicate reference organism name and accession number below
@@ -60,11 +64,13 @@ REF_GENOME="data/reference/${REF_ACC}.fasta"  # local path to the reference FAST
 mapfile -t STRAINS < $1  # read the strain accessions from the input file into an array
 
 # Creating variant calling directory where the project will sit.
-[ -d variant_calling ] || mkdir -p variant_calling  # create the project working dir if it doesn't exist
+# create the project working dir if it doesn't exist
+[ -d variant_calling ] || mkdir -p variant_calling
 cd variant_calling  # run everything below from inside the project dir
 
 # Store path to QC directory for the strains that are being worked with
-QC_DIR="qc/$(IFS=_; echo "${STRAINS[*]}")_qc"  # QC output dir named after the strain set being processed
+# QC output dir named after the strain set being processed
+QC_DIR="qc/$(IFS=_; echo "${STRAINS[*]}")_qc"
 
 # Define number of threads to use: If the job is run under SLURM, SLURM_CPUS_PER_TASK set from the SBATCH directives will be used /
 # otherwise it defaults to one CPU per task.
@@ -73,8 +79,9 @@ THREADS=${SLURM_CPUS_PER_TASK:-1}  # use the SLURM CPU allocation, else default 
 echo "Using $THREADS thread(s) for multi-threaded tools"  # report the chosen thread count
 
 # Create file structure
+# create the whole project directory tree in one go
 mkdir -p alignments/sam alignments/unsorted_bam alignments/sorted_bam annotation checkpoints comparisons \
-	 data/fastq_files data/reference data/sra_files ${QC_DIR} variants  # create the whole project directory tree in one go
+	 data/fastq_files data/reference data/sra_files ${QC_DIR} variants
 
 	# Creating qc directories for each strain
 	for STRAIN_ACC in ${STRAINS[@]}; do  # make a QC subdir for each strain
@@ -85,12 +92,14 @@ mkdir -p alignments/sam alignments/unsorted_bam alignments/sorted_bam annotation
 download_reference () {  # function: download the reference genome FASTA
 	# check if reference was already downloaded and exists in reference directory. If it doesn't, then it is downloaded. /
 	# If it exists then the download is skipped
-	local CHECKPOINT="checkpoints/${REF_ACC}_reference_download.done"  # checkpoint marking the reference as already downloaded
+	# checkpoint marking the reference as already downloaded
+	local CHECKPOINT="checkpoints/${REF_ACC}_reference_download.done"
 
 	if [ ! -f "${CHECKPOINT}" ]; then  # only download if the checkpoint is absent
 		echo "Downloading ${REF_ACC} reference sequence..."  # progress marker
+		# fetch the reference FASTA from NCBI
 		wget -O "${REF_GENOME}" \
-		"https://www.ncbi.nlm.nih.gov/sviewer/viewer.fcgi?id=${REF_ACC}&db=nuccore&report=fasta"  # fetch the reference FASTA from NCBI
+		"https://www.ncbi.nlm.nih.gov/sviewer/viewer.fcgi?id=${REF_ACC}&db=nuccore&report=fasta"
 
 		touch "${CHECKPOINT}"  # record completion so future runs skip this
 
@@ -106,13 +115,17 @@ download_fastq_files () {  # function: prefetch and convert reads for every stra
 
 		if [ ! -f "${CHECKPOINT}" ]; then  # skip if this strain was already downloaded
 			echo "Downloading ${STRAIN_ACC} sra files..."  # progress marker
-			prefetch ${STRAIN_ACC} -O data/sra_files  # download the SRA object first (avoids mid-convert timeouts)
-			echo "Download of ${STRAIN_ACC} sra files complete. Starting conversion to fastq"  # progress marker
-			fasterq-dump --split-files ${STRAIN_ACC} -O data/fastq_files/${STRAIN_ACC}  # convert the SRA to paired FASTQs locally
+			# download the SRA object first (avoids mid-convert timeouts)
+			prefetch ${STRAIN_ACC} -O data/sra_files
+			# progress marker
+			echo "Download of ${STRAIN_ACC} sra files complete. Starting conversion to fastq"
+			# convert the SRA to paired FASTQs locally
+			fasterq-dump --split-files ${STRAIN_ACC} -O data/fastq_files/${STRAIN_ACC}
 
 			touch "${CHECKPOINT}"  # mark this strain done
 		else
-			echo "${STRAIN_ACC} reads already downloaded. Skipping..."  # skip message for an already-downloaded strain
+			# skip message for an already-downloaded strain
+			echo "${STRAIN_ACC} reads already downloaded. Skipping..."
 		fi
 	done
 	echo "FASTQ FILES DOWNLOADED✅"  # phase done marker
@@ -120,12 +133,14 @@ download_fastq_files () {  # function: prefetch and convert reads for every stra
 
 qc () {  # function: FastQC per strain then aggregate with MultiQC
 
-	local CHECKPOINT="checkpoints/qc_$(IFS=_; echo "${STRAINS[*]}").done"  # checkpoint for the whole QC step
+	# checkpoint for the whole QC step
+	local CHECKPOINT="checkpoints/qc_$(IFS=_; echo "${STRAINS[*]}").done"
 
 	if [ ! -f ${CHECKPOINT} ]; then  # skip if QC was already run
 		for STRAIN_ACC in ${STRAINS[@]}; do  # QC each strain in turn
 			echo "Performing quality checks on ${STRAIN_ACC} reads..."  # progress marker
-			fastqc data/fastq_files/${STRAIN_ACC}/*.fastq -o ${QC_DIR}/${STRAIN_ACC}  # run FastQC on this strain's FASTQs
+			# run FastQC on this strain's FASTQs
+			fastqc data/fastq_files/${STRAIN_ACC}/*.fastq -o ${QC_DIR}/${STRAIN_ACC}
 			echo "Quality checks complete."  # progress marker
 		done
 
@@ -145,7 +160,8 @@ index_ref_genome () {  # function: build BWA and samtools indexes on the referen
 	# Indexing  reference genome
 
 	echo "Indexing reference genome..."  # progress marker
-	local CHECKPOINT="checkpoints/${REF_ACC}_ref_index.done"  # checkpoint marking the reference as indexed
+	# checkpoint marking the reference as indexed
+	local CHECKPOINT="checkpoints/${REF_ACC}_ref_index.done"
 
 	if [ ! -f "${CHECKPOINT}" ]; then  # skip if already indexed
 		bwa index ${REF_GENOME} # Creating index files for alignment step
@@ -176,7 +192,8 @@ align_reads () {  # function: align each strain's reads to the reference with BW
 
 			touch "${CHECKPOINT}"  # mark this strain aligned
 		else
-			echo "${STRAIN_ACC} reads already aligned. Skipping..."  # skip message for an already-aligned strain
+			# skip message for an already-aligned strain
+			echo "${STRAIN_ACC} reads already aligned. Skipping..."
 		fi
 	done
 	echo "ALIGNING READS COMPLETE✅"  # phase done marker
@@ -188,7 +205,8 @@ sam_to_indexed_bam () {  # function: SAM -> BAM, optional merge, then sort and i
 
         echo "Processing ${STRAIN_ACC} SAM to indexed BAM..."  # progress marker
 
-        CHECKPOINT="checkpoints/${STRAIN_ACC}_indexed_bam.done"  # per-strain checkpoint for this conversion
+        # per-strain checkpoint for this conversion
+        CHECKPOINT="checkpoints/${STRAIN_ACC}_indexed_bam.done"
 
         if [ ! -f "${CHECKPOINT}" ]; then  # skip if already done
             # Convert SAM to BAM
@@ -196,12 +214,14 @@ sam_to_indexed_bam () {  # function: SAM -> BAM, optional merge, then sort and i
                 alignments/unsorted_bam/${STRAIN_ACC}.bam  # convert the SAM to an unsorted BAM
 
             # Conditional merge (if more than one BAM exists)
-            BAM_COUNT=$(ls alignments/unsorted_bam/${STRAIN_ACC}*.bam 2>/dev/null | wc -l)  # count BAMs to decide whether a merge is needed
+            # count BAMs to decide whether a merge is needed
+            BAM_COUNT=$(ls alignments/unsorted_bam/${STRAIN_ACC}*.bam 2>/dev/null | wc -l)
             if [ "$BAM_COUNT" -gt 1 ]; then  # more than one BAM present for this strain?
                 echo "Merging BAM files for ${STRAIN_ACC}..."  # progress marker
                 samtools merge alignments/unsorted_bam/${STRAIN_ACC}_merged.bam \
                     alignments/unsorted_bam/${STRAIN_ACC}*.bam  # merge the multiple BAMs into one
-                merged_bam=alignments/unsorted_bam/${STRAIN_ACC}_merged.bam  # point downstream steps at the merged BAM
+                # point downstream steps at the merged BAM
+                merged_bam=alignments/unsorted_bam/${STRAIN_ACC}_merged.bam
             else
                 echo "Only one BAM file for ${STRAIN_ACC}. Using it directly."  # single-BAM message
                 merged_bam=alignments/unsorted_bam/${STRAIN_ACC}.bam  # use the single BAM directly
@@ -209,14 +229,17 @@ sam_to_indexed_bam () {  # function: SAM -> BAM, optional merge, then sort and i
 
             # Sort and index
             echo "Sorting ${merged_bam}..."  # progress marker
-            samtools sort -@ ${THREADS} "$merged_bam" -o alignments/sorted_bam/${STRAIN_ACC}.sorted.bam  # coordinate-sort the BAM
+            # coordinate-sort the BAM
+            samtools sort -@ ${THREADS} "$merged_bam" -o alignments/sorted_bam/${STRAIN_ACC}.sorted.bam
 
             echo "Indexing alignments/sorted_bam/${STRAIN_ACC}.sorted.bam..."  # progress marker
-            samtools index alignments/sorted_bam/${STRAIN_ACC}.sorted.bam  # build the .bai index for random access
+            # build the .bai index for random access
+            samtools index alignments/sorted_bam/${STRAIN_ACC}.sorted.bam
 
             touch "${CHECKPOINT}"  # mark this strain done
         else
-            echo "SAM to indexed BAM for ${STRAIN_ACC} already done. Skipping..."  # skip message when already done
+            # skip message when already done
+            echo "SAM to indexed BAM for ${STRAIN_ACC} already done. Skipping..."
         fi
     done
 
@@ -229,8 +252,9 @@ variant_call () {  # function: call variants per strain with bcftools
 
 		echo "Calling ${STRAIN_ACC} variants..."  # progress marker
 
-		local CHECKPOINT="checkpoints/${STRAIN_ACC}_variant_calling.done"  # per-strain variant-calling checkpoint
-		
+		# per-strain variant-calling checkpoint
+		local CHECKPOINT="checkpoints/${STRAIN_ACC}_variant_calling.done"
+
 		echo "Present working directory: $(pwd)"  # debug: show the current working directory
 		echo "Folders in current working directory: $(ls)"  # debug: list the current directory contents
 		echo "Processing strain: ${STRAIN_ACC}"  # debug: which strain is being processed
@@ -263,56 +287,68 @@ index_variants () {  # function: index each strain's VCF
 
 		echo "Indexing ${STRAIN_ACC} variants..."  # progress marker
 
-		local CHECKPOINT="checkpoints/${STRAIN_ACC}_variant_indexing.done"  # per-strain indexing checkpoint
+		# per-strain indexing checkpoint
+		local CHECKPOINT="checkpoints/${STRAIN_ACC}_variant_indexing.done"
 
 		if [ ! -f "${CHECKPOINT}" ]; then  # skip if already indexed
 			bcftools index variants/${STRAIN_ACC}.vcf.gz  # build the VCF index (.csi)
 
 			touch "${CHECKPOINT}"  # mark this strain done
 		else
-			echo "Indexing ${STRAIN_ACC} variants already done. Skipping..."  # skip message when already indexed
+			# skip message when already indexed
+			echo "Indexing ${STRAIN_ACC} variants already done. Skipping..."
 		fi
 	done
 	echo "INDEXING VARIANTS COMPLETE✅"  # phase done marker
 }
 
-build_variant_annotation_database () {  # function: stage files and build the snpEff annotation database
+# function: stage files and build the snpEff annotation database
+build_variant_annotation_database () {
 	# Create snpEff_data/ref_acc directory for building variant annotation database to be used in effect prediction
 	# Copy reference genome file into snpEff/ref_acc directory
 	# Rename 'ref_acc.fasta' to 'sequences.fa' as that's what snpEff will look for when building the database and annotating
 
-	local CHECKPOINT1="checkpoints/${REF_ACC}_snpEff_sequences.fa_creation.done"  # checkpoint for staging sequences.fa
+	# checkpoint for staging sequences.fa
+	local CHECKPOINT1="checkpoints/${REF_ACC}_snpEff_sequences.fa_creation.done"
 
-	echo "Creating data/snpEff_data/${REF_ACC} directory and copying ${REF_GENOME} as sequences.fa to it..."  # progress marker
+	# progress marker
+	echo "Creating data/snpEff_data/${REF_ACC} directory and copying ${REF_GENOME} as sequences.fa to it..."
 	if [ ! -f "${CHECKPOINT1}" ]; then  # skip if already staged
 		mkdir -p data/snpEff_data/${REF_ACC}  # snpEff expects a per-genome data directory
 		cp ${REF_GENOME} data/snpEff_data/${REF_ACC}  # copy the reference FASTA into it
-		mv data/snpEff_data/${REF_ACC}/${REF_ACC}.fasta data/snpEff_data/${REF_ACC}/sequences.fa  # rename to sequences.fa (the name snpEff looks for)
+		# rename to sequences.fa (the name snpEff looks for)
+		mv data/snpEff_data/${REF_ACC}/${REF_ACC}.fasta data/snpEff_data/${REF_ACC}/sequences.fa
 
 		touch "${CHECKPOINT1}"  # mark this sub-step done
 	else
-		echo "sequences.fa already exists in data/snpEff_data/${REF_ACC} directory. Skipping..."  # skip message when already staged
+		# skip message when already staged
+		echo "sequences.fa already exists in data/snpEff_data/${REF_ACC} directory. Skipping..."
 	fi
 
 	# Download reference general feature file (gff) into snpEff/ref_acc for building the database and annotating
 
-	local CHECKPOINT2="checkpoints/${REF_ACC}_snpEff_genes.gff_download.done"  # checkpoint for the genes.gff download
+	# checkpoint for the genes.gff download
+	local CHECKPOINT2="checkpoints/${REF_ACC}_snpEff_genes.gff_download.done"
 
-	echo "Downloading ${REF_ACC} genes.gff file to data/snpEff_data/${REF_ACC} directory..."  # progress marker
+	# progress marker
+	echo "Downloading ${REF_ACC} genes.gff file to data/snpEff_data/${REF_ACC} directory..."
 	if [ ! -f "${CHECKPOINT2}" ]; then  # skip if already downloaded
+		# fetch the GFF3 annotation snpEff needs
 		wget -O data/snpEff_data/${REF_ACC}/genes.gff \
-		"https://www.ncbi.nlm.nih.gov/sviewer/viewer.fcgi?id=${REF_ACC}&db=nuccore&report=gff3"  # fetch the GFF3 annotation snpEff needs
+		"https://www.ncbi.nlm.nih.gov/sviewer/viewer.fcgi?id=${REF_ACC}&db=nuccore&report=gff3"
 
 		touch "${CHECKPOINT2}"  # mark this sub-step done
 	else
-		echo "genes.gff file already exists in data/snpEff_data/${REF_ACC} directory. Skipping..."  # skip message when already present
+		# skip message when already present
+		echo "genes.gff file already exists in data/snpEff_data/${REF_ACC} directory. Skipping..."
 	fi
 
 	# Creating and populating snpEff.config file
-	
+
 	echo "Creating and populating ${REF_ACC} snpEff.config file..."  # progress marker
 
-	local CHECKPOINT3="checkpoints/${REF_ACC}_snpEff.config_creation.done"  # checkpoint for creating the config
+	# checkpoint for creating the config
+	local CHECKPOINT3="checkpoints/${REF_ACC}_snpEff.config_creation.done"
 
 	if [ ! -f "${CHECKPOINT3}" ]; then  # skip if the config already exists
 		cat <<EOL > ./snpEff.config  # write the genome entry so snpEff can find this DB
@@ -322,7 +358,8 @@ EOL
 
 		touch "${CHECKPOINT3}"  # mark this sub-step done
 	else
-		echo "${REF_ACC} snpEff.config file already exists. Skipping..."  # skip message when config exists
+		# skip message when config exists
+		echo "${REF_ACC} snpEff.config file already exists. Skipping..."
 	fi
 
 	# Build the reference database for annotation. /
@@ -331,14 +368,17 @@ EOL
 
 	echo "Building ${REF_ACC} variant annotation database..."  # progress marker
 
-	local CHECKPOINT4="checkpoints/${REF_ACC}_ref_variant_annotation_database_build.done"  # checkpoint for the database build
+	# checkpoint for the database build
+	local CHECKPOINT4="checkpoints/${REF_ACC}_ref_variant_annotation_database_build.done"
 
 	if [ ! -f "${CHECKPOINT4}" ]; then  # skip if already built
-		snpEff build -gff3 -v -noCheckProtein -noCheckCds -dataDir data/snpEff_data ${REF_ACC}  # build the annotation DB (protein/CDS checks off for viruses)
+		# build the annotation DB (protein/CDS checks off for viruses)
+		snpEff build -gff3 -v -noCheckProtein -noCheckCds -dataDir data/snpEff_data ${REF_ACC}
 
 		touch "${CHECKPOINT4}"  # mark this sub-step done
 	else
-		echo "${REF_ACC} variant annotation database already built. Skipping..."  # skip message when already built
+		# skip message when already built
+		echo "${REF_ACC} variant annotation database already built. Skipping..."
 	fi
 	echo "BUILDING ${REF_ACC} snpEff DATABASE FOR VARIANT ANNOTATION COMPLETE✅"  # phase done marker
 }
@@ -348,7 +388,8 @@ annotate_variants () {  # function: annotate each strain's variants with snpEff
 	for STRAIN_ACC in ${STRAINS[@]}; do  # loop over each strain
 
 		echo "Annotating ${STRAIN_ACC} variants..."  # progress marker
-		local CHECKPOINT="checkpoints/${STRAIN_ACC}_variant_annotation.done"  # per-strain annotation checkpoint
+		# per-strain annotation checkpoint
+		local CHECKPOINT="checkpoints/${STRAIN_ACC}_variant_annotation.done"
 
 		if [ ! -f "${CHECKPOINT}" ]; then  # skip if already annotated
 			snpEff -dataDir data/snpEff_data -v ${REF_ACC} variants/${STRAIN_ACC}.vcf.gz \
@@ -356,7 +397,8 @@ annotate_variants () {  # function: annotate each strain's variants with snpEff
 
 			touch "${CHECKPOINT}"  # mark this strain done
 		else
-			echo "${STRAIN_ACC} variants already annotated. Skipping..."  # skip message when already annotated
+			# skip message when already annotated
+			echo "${STRAIN_ACC} variants already annotated. Skipping..."
 		fi
 	done
 	echo "VARIANT ANNOTATION COMPLETE✅"  # phase done marker
@@ -367,7 +409,8 @@ extract_missense_variants () {  # function: extract missense SNPs from each stra
 	for STRAIN_ACC in ${STRAINS[@]}; do  # loop over each strain
 
 		echo "Extracting ${STRAIN_ACC} missense variants..."  # progress marker
-		local CHECKPOINT="checkpoints/${STRAIN_ACC}_missense_variants_extraction.done"  # per-strain extraction checkpoint
+		# per-strain extraction checkpoint
+		local CHECKPOINT="checkpoints/${STRAIN_ACC}_missense_variants_extraction.done"
 
 		if [ ! -f "${CHECKPOINT}" ]; then  # skip if already extracted
 			bcftools view -i 'ANN~"missense_variant"' annotation/${STRAIN_ACC}.ann.vcf \
@@ -375,15 +418,17 @@ extract_missense_variants () {  # function: extract missense SNPs from each stra
 
 			touch "${CHECKPOINT}"  # mark this strain done
 		else
-			echo "Extracting ${STRAIN_ACC} missense variants already done. Skipping..."  # skip message when already extracted
+			# skip message when already extracted
+			echo "Extracting ${STRAIN_ACC} missense variants already done. Skipping..."
 		fi
 	done
 	echo "MISSENSE VARIANT EXTRACTION COMPLETE✅"  # phase done marker
 }
 
 compress_and_index_missense_variant_files () {  # function: bgzip and tabix-index the missense VCFs
-	
-	local CHECKPOINT="checkpoints/compressing_$(IFS=', '; echo "${STRAINS[*]}")_missense_vcfs.done"  # checkpoint for the compress/index step
+
+	# checkpoint for the compress/index step
+	local CHECKPOINT="checkpoints/compressing_$(IFS=', '; echo "${STRAINS[*]}")_missense_vcfs.done"
 
 	if [ ! -f ${CHECKPOINT} ]; then  # skip if already done
 		# Compressing and indexing missense variant files because bcftools isec requires bgzip compressed files as input
@@ -391,15 +436,17 @@ compress_and_index_missense_variant_files () {  # function: bgzip and tabix-inde
 		for STRAIN_ACC in ${STRAINS[@]}; do  # loop over each strain
 			echo "Compressing variant files..."  # progress marker
 			bgzip annotation/${STRAIN_ACC}.missense.vcf  # bgzip the VCF (bcftools isec needs bgzipped input)
-	
+
 			# Index
 			echo "Indexing missense variants..."  # progress marker
-			tabix -p vcf annotation/${STRAIN_ACC}.missense.vcf.gz  # build the tabix index for the bgzipped VCF
+			# build the tabix index for the bgzipped VCF
+			tabix -p vcf annotation/${STRAIN_ACC}.missense.vcf.gz
 		done
 
 		touch "${CHECKPOINT}"  # mark this step done
 	else
-		echo "Compressing and indexing missense variants already done. Skipping..."  # skip message when already done
+		# skip message when already done
+		echo "Compressing and indexing missense variants already done. Skipping..."
 	fi
 
 		echo "COMPRESSING AND INDEXING MISSENSE VARIANTS COMPLETE✅"  # phase done marker
@@ -408,12 +455,14 @@ compress_and_index_missense_variant_files () {  # function: bgzip and tabix-inde
 
 compare_missense_variants () {  # function: intersect strains' missense VCFs with bcftools isec
 
-	local CHECKPOINT="checkpoints/$(IFS=_; echo "${STRAINS[*]}")_missense_variant_comparison.done"  # checkpoint for the comparison step
+	# checkpoint for the comparison step
+	local CHECKPOINT="checkpoints/$(IFS=_; echo "${STRAINS[*]}")_missense_variant_comparison.done"
 
 	echo "Comparing $(IFS=', '; echo "${STRAINS[*]}") missesnse variants..."  # progress marker
 	if [ ! -f ${CHECKPOINT} ]; then  # skip if already compared
 
-		local OUT_DIR="$1/$(IFS=_; echo "${STRAINS[*]}")"  # output dir under the passed-in base directory ($1)
+		# output dir under the passed-in base directory ($1)
+		local OUT_DIR="$1/$(IFS=_; echo "${STRAINS[*]}")"
 		mkdir -p "$OUT_DIR"  # ensure the output dir exists
 
 		vcfs=()  # collect the per-strain VCF paths
@@ -430,7 +479,8 @@ compare_missense_variants () {  # function: intersect strains' missense VCFs wit
 
 		touch "${CHECKPOINT}"  # mark this step done
 	else
-		echo "$(IFS=', '; echo "${STRAINS[*]}") missense variants already compared. Skipping..."  # skip message when already compared
+		# skip message when already compared
+		echo "$(IFS=', '; echo "${STRAINS[*]}") missense variants already compared. Skipping..."
 	fi
 	echo "MISSENSE VARIANT COMPARISON COMPLETE✅"  # phase done marker
 }
@@ -475,4 +525,5 @@ compress_and_index_missense_variant_files  # step 12: bgzip and index the missen
 # Compare missense snps between strains
 compare_missense_variants comparisons  # step 13: compare strains (results under comparisons/)
 
-echo "READ ALIGNMENT AND, VARIANT CALLING, ANNOTATION & EFFECT PREDICTION PIPELINE COMPLETE✅✅✅"  # whole pipeline done marker
+# whole pipeline done marker
+echo "READ ALIGNMENT AND, VARIANT CALLING, ANNOTATION & EFFECT PREDICTION PIPELINE COMPLETE✅✅✅"

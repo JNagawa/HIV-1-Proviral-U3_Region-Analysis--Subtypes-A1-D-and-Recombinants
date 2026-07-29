@@ -11,17 +11,24 @@
 # headers (they're also meant to be runnable directly for quick local
 # testing, per their own "Usage: ./compare_X.sh" docstrings).
 # Usage: sbatch scripts/utils/run_comparison_step.slurm.sh <path/to/compare_script.sh>
-set -euo pipefail                                    # -e abort on error, -u on unset vars, pipefail on any failed pipe stage
-TARGET_SCRIPT="$1"                                   # the comparison script to run, passed as the sbatch argument
+# -e abort on error, -u on unset vars, pipefail on any failed pipe stage
+set -euo pipefail
+# the comparison script to run, passed as the sbatch argument
+TARGET_SCRIPT="$1"
 
 CONDA_SH="$HOME/miniconda3/etc/profile.d/conda.sh"   # expected conda init script location
 if [ -f "$CONDA_SH" ]; then                          # prefer the known miniconda path if present
-    source "$CONDA_SH"                               # load conda so `conda activate` works in this non-interactive shell
+    # load conda so `conda activate` works in this non-interactive shell
+    source "$CONDA_SH"
 else
-    source "$(conda info --base)/etc/profile.d/conda.sh"  # fall back to wherever conda reports its base
+    # fall back to wherever conda reports its base
+    source "$(conda info --base)/etc/profile.d/conda.sh"
 fi
-conda activate HIV_U3analysis                        # activate the shared analysis env with all the tools
+# activate the shared analysis env with all the tools
+conda activate HIV_U3analysis
 
-export THREADS="${SLURM_CPUS_PER_TASK:-8}"           # expose the allocated core count so tools thread correctly (default 8)
-cd /etc/ace-data/home/jnagawa/Internship             # run from the repo root so the script's relative paths resolve
+# expose the allocated core count so tools thread correctly (default 8)
+export THREADS="${SLURM_CPUS_PER_TASK:-8}"
+# run from the repo root so the script's relative paths resolve
+cd /etc/ace-data/home/jnagawa/Internship
 bash "${TARGET_SCRIPT}"                              # execute the requested comparison step

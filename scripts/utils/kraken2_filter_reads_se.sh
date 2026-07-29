@@ -12,18 +12,23 @@
 # Produces:
 #   <OUTDIR>/<SAMPLE_NAME>.kraken_filtered.fastq.gz
 #   <OUTDIR>/<SAMPLE_NAME>.kreport
-set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
-READS="$1" OUTDIR="$2" SAMPLE="$3" KRAKEN2_DB="$4"   # positional args: input reads, output dir, sample name, Kraken2 DB dir
+# -u errors on unset vars, pipefail fails a pipe if any stage fails
+set -uo pipefail
+# positional args: input reads, output dir, sample name, Kraken2 DB dir
+READS="$1" OUTDIR="$2" SAMPLE="$3" KRAKEN2_DB="$4"
 
-NODES_DMP="${KRAKEN2_DB}/nodes.dmp"                   # taxonomy tree bundled with the DB, used for the ancestor walk
-[ -s "${NODES_DMP}" ] || { echo "ERROR: ${NODES_DMP} not found -- is KRAKEN2_DB (${KRAKEN2_DB}) an extracted Kraken2 database?" >&2; exit 1; }  # bail if the DB isn't a real extracted Kraken2 database
+# taxonomy tree bundled with the DB, used for the ancestor walk
+NODES_DMP="${KRAKEN2_DB}/nodes.dmp"
+# bail if the DB isn't a real extracted Kraken2 database
+[ -s "${NODES_DMP}" ] || { echo "ERROR: ${NODES_DMP} not found -- is KRAKEN2_DB (${KRAKEN2_DB}) an extracted Kraken2 database?" >&2; exit 1; }
 
 mkdir -p "${OUTDIR}"                                  # ensure the output dir exists
 
+# classify each read against the DB; per-read output + hierarchical report
 kraken2 --db "${KRAKEN2_DB}" --gzip-compressed --threads "${THREADS:-4}" \
     --output "${OUTDIR}/${SAMPLE}.kraken" \
     --report "${OUTDIR}/${SAMPLE}.kreport" \
-    "${READS}"                                        # classify each read against the DB; per-read output + hierarchical report
+    "${READS}"
 
 awk '
     NR==FNR {                                         # first file = nodes.dmp: build the taxid->parent map
@@ -48,7 +53,10 @@ awk '
 ' "${NODES_DMP}" "${OUTDIR}/${SAMPLE}.kraken" > "${OUTDIR}/${SAMPLE}.keep_read_ids.txt"  # write the keep-list of read ids
 
 N_TOTAL=$(wc -l < "${OUTDIR}/${SAMPLE}.kraken")              # total classified reads
-N_KEEP=$(wc -l < "${OUTDIR}/${SAMPLE}.keep_read_ids.txt")   # reads kept after host/bacterial removal
-echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} reads retained (human/bacterial reads discarded)." >&2  # progress summary to stderr
+# reads kept after host/bacterial removal
+N_KEEP=$(wc -l < "${OUTDIR}/${SAMPLE}.keep_read_ids.txt")
+# progress summary to stderr
+echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} reads retained (human/bacterial reads discarded)." >&2
 
-seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${READS}" -o "${OUTDIR}/${SAMPLE}.kraken_filtered.fastq.gz"  # subset the FASTQ to just the kept read ids
+# subset the FASTQ to just the kept read ids
+seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${READS}" -o "${OUTDIR}/${SAMPLE}.kraken_filtered.fastq.gz"

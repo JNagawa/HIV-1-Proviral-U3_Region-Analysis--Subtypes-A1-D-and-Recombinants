@@ -13,21 +13,29 @@
 # rather than folded into download_qc -- these are multi-GB HiFi sets and
 # must not run on the login node.
 # Usage: sbatch scripts/download_qc/pacbio/download_pacbio.slurm.sh
-set -euo pipefail                                    # -e abort on any error, -u error on unset vars, pipefail catch failures anywhere in a pipe
+# -e abort on any error, -u error on unset vars, pipefail catch failures anywhere in a pipe
+set -euo pipefail
 
 CONDA_SH="$HOME/miniconda3/etc/profile.d/conda.sh"   # usual miniconda hook location
-if [ -f "$CONDA_SH" ]; then source "$CONDA_SH"; else source "$(conda info --base)/etc/profile.d/conda.sh"; fi  # source it, or fall back to whatever conda is on PATH
-conda activate HIV_U3analysis                        # activate the env with SRA-tools (prefetch/fasterq-dump)
+# source it, or fall back to whatever conda is on PATH
+if [ -f "$CONDA_SH" ]; then source "$CONDA_SH"; else source "$(conda info --base)/etc/profile.d/conda.sh"; fi
+# activate the env with SRA-tools (prefetch/fasterq-dump)
+conda activate HIV_U3analysis
 
-cd /etc/ace-data/home/jnagawa/Internship             # work from the repo root so relative paths below resolve
-source scripts/common/lib_compare.sh                 # load shared helpers (needed for subset_accessions)
+# work from the repo root so relative paths below resolve
+cd /etc/ace-data/home/jnagawa/Internship
+# load shared helpers (needed for subset_accessions)
+source scripts/common/lib_compare.sh
 
 RAW_DIR="data/raw/pacbio"                            # where the final HiFi FASTQs land
-PREFETCH_DIR="data/raw/pacbio/.sra"                  # scratch dir for the large prefetched .sra files
+# scratch dir for the large prefetched .sra files
+PREFETCH_DIR="data/raw/pacbio/.sra"
 mkdir -p "${RAW_DIR}" "${PREFETCH_DIR}"              # create both dirs if they don't exist
 THREADS="${SLURM_CPUS_PER_TASK:-8}"                  # use Slurm's allocated CPUs, else default to 8
 
-for SRR in $(subset_accessions pacbio scripts/common/subset_samples.tsv); do  # loop over just the PacBio accessions in the subset
+# loop over the `pacbio_sra` rows -- the SRA HiFi runs. (`pacbio` is the masked
+# local subset, which has no SRA accession to prefetch.)
+for SRR in $(subset_accessions pacbio_sra scripts/common/subset_samples.tsv); do
     FINAL="${RAW_DIR}/${SRR}.fastq.gz"               # expected final output for this accession
     if [ -s "${FINAL}" ]; then                       # if it already exists (non-empty)...
         echo "=== ${SRR} already present (${FINAL}), skipping ==="  # ...report it...
@@ -36,21 +44,29 @@ for SRR in $(subset_accessions pacbio scripts/common/subset_samples.tsv); do  # 
     echo "=== prefetch ${SRR} ==="                   # progress marker
     # prefetch's default cap is 20G; set 100G explicitly so the subset (and a
     # Revio run, ~18GB, if added later) is never silently skipped.
-    prefetch --max-size 100G --output-directory "${PREFETCH_DIR}" "${SRR}"  # download the .sra into the scratch dir with a raised size cap
+    # download the .sra into the scratch dir with a raised size cap
+    prefetch --max-size 100G --output-directory "${PREFETCH_DIR}" "${SRR}"
 
     echo "=== fasterq-dump ${SRR} (single-end HiFi) ==="  # progress marker
     # HiFi runs are single-end: fasterq-dump yields one <SRR>.fastq. --concatenate-reads
     # keeps any technical/biological split as one stream; then gzip.
+    # convert the .sra to a single FASTQ in RAW_DIR
     fasterq-dump --threads "${THREADS}" --outdir "${RAW_DIR}" \
-        --concatenate-reads "${PREFETCH_DIR}/${SRR}/${SRR}.sra"  # convert the .sra to a single FASTQ in RAW_DIR
-    if [ -s "${RAW_DIR}/${SRR}.fastq" ]; then         # if the conversion produced a non-empty FASTQ...
-        gzip -f "${RAW_DIR}/${SRR}.fastq"            # ...compress it in place (-f overwrites any stale .gz)
+        --concatenate-reads "${PREFETCH_DIR}/${SRR}/${SRR}.sra"
+    # if the conversion produced a non-empty FASTQ...
+    if [ -s "${RAW_DIR}/${SRR}.fastq" ]; then
+        # ...compress it in place (-f overwrites any stale .gz)
+        gzip -f "${RAW_DIR}/${SRR}.fastq"
     else
-        echo "WARNING: fasterq-dump produced no FASTQ for ${SRR}" >&2  # otherwise warn (something went wrong)
+        # otherwise warn (something went wrong)
+        echo "WARNING: fasterq-dump produced no FASTQ for ${SRR}" >&2
     fi
     # prefetched .sra is large and no longer needed once the FASTQ exists
-    [ -s "${FINAL}" ] && rm -rf "${PREFETCH_DIR:?}/${SRR}"  # only delete the .sra once the gzipped FASTQ exists; :? guards against an empty var wiping the wrong path
+    # only delete the .sra once the gzipped FASTQ exists; :? guards against an empty var wiping the
+    # wrong path
+    [ -s "${FINAL}" ] && rm -rf "${PREFETCH_DIR:?}/${SRR}"
 done
 
 echo "Done. HiFi FASTQs in ${RAW_DIR}:"              # final summary header
-ls -lh "${RAW_DIR}"/*.fastq.gz 2>/dev/null || echo "(none produced)"  # list the produced FASTQs, or note if none exist
+# list the produced FASTQs, or note if none exist
+ls -lh "${RAW_DIR}"/*.fastq.gz 2>/dev/null || echo "(none produced)"

@@ -18,35 +18,53 @@
 #     then reduces to the proviral core. Reads that don't map to HIV at all
 #     are dropped (no provirus). minimap2 + samtools + awk + seqkit only.
 # Usage: ./extract_provirus_pacbio.sh   (via sbatch scripts/utils/run_comparison_step.slurm.sh)
-set -uo pipefail                                     # -u errors on unset vars, pipefail catches a failing pipe stage; no -e so one bad sample doesn't abort the run
+# -u errors on unset vars, pipefail catches a failing pipe stage; no -e so one bad sample doesn't
+# abort the run
+set -uo pipefail
 
-STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"           # absolute path of this script's own dir, so paths work from any launch location
-REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"     # repo top-level (three dirs up), the base for every other path below
-source "${REPO_ROOT}/scripts/common/lib_compare.sh"  # load shared helpers: measure_and_run, parse_time_metrics, append_summary_row, subset_accessions
+# absolute path of this script's own dir, so paths work from any launch location
+STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
+# repo top-level (three dirs up), the base for every other path below
+REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"
+# load shared helpers: measure_and_run, parse_time_metrics, append_summary_row, subset_accessions
+source "${REPO_ROOT}/scripts/common/lib_compare.sh"
 
-REF_FASTA="${REPO_ROOT}/data/reference/K03455.1.fasta"           # HXB2 reference genome reads are mapped against to find the provirus
-QC_DIR="${REPO_ROOT}/results/download_qc/pacbio"                 # where the QC step wrote filtered/cleaned reads
-RAW_DIR="${REPO_ROOT}/data/raw/pacbio"                           # downloaded raw HiFi FASTQs (and any local pre-masked inputs)
-MASK_DIR="${REPO_ROOT}/data/processed/pacbio/masked"             # intermediate host-N-masked FASTAs produced here
-RESULTS_DIR="${REPO_ROOT}/results/proviral_extraction/pacbio"    # output: proviral cores, coords, timing, summary
-SUMMARY_TSV="${RESULTS_DIR}/summary.tsv"                         # the TSV each sample appends a timing/validity row to
-STRIP_TOOL="${REPO_ROOT}/scripts/utils/extract_provirus_strip_hostN.sh"  # the actual N-flank stripper that yields the proviral core
+# HXB2 reference genome reads are mapped against to find the provirus
+REF_FASTA="${REPO_ROOT}/data/reference/K03455.1.fasta"
+# where the QC step wrote filtered/cleaned reads
+QC_DIR="${REPO_ROOT}/results/download_qc/pacbio"
+# downloaded raw HiFi FASTQs (and any local pre-masked inputs)
+RAW_DIR="${REPO_ROOT}/data/raw/pacbio"
+# intermediate host-N-masked FASTAs produced here
+MASK_DIR="${REPO_ROOT}/data/processed/pacbio/masked"
+# output: proviral cores, coords, timing, summary
+RESULTS_DIR="${REPO_ROOT}/results/proviral_extraction/pacbio"
+# the TSV each sample appends a timing/validity row to
+SUMMARY_TSV="${RESULTS_DIR}/summary.tsv"
+# the actual N-flank stripper that yields the proviral core
+STRIP_TOOL="${REPO_ROOT}/scripts/utils/extract_provirus_strip_hostN.sh"
 mkdir -p "${RESULTS_DIR}" "${MASK_DIR}"              # ensure output and intermediate dirs exist
-[ -f "${RESULTS_DIR}/ease_of_use_notes.md" ] || cp "${REPO_ROOT}/scripts/common/ease_of_use_template.md" "${RESULTS_DIR}/ease_of_use_notes.md"  # seed the manual notes file from the template on first run
+# seed the manual notes file from the template on first run
+[ -f "${RESULTS_DIR}/ease_of_use_notes.md" ] || cp "${REPO_ROOT}/scripts/common/ease_of_use_template.md" "${RESULTS_DIR}/ease_of_use_notes.md"
 
-if [ ! -s "${REF_FASTA}" ]; then                     # can't map to HIV without the reference, so fail early...
+# can't map to HIV without the reference, so fail early...
+if [ ! -s "${REF_FASTA}" ]; then
     echo "ERROR: HXB2 reference ${REF_FASTA} not found." >&2  # ...with a clear error on stderr...
     exit 1                                           # ...and a non-zero exit
 fi
-THREADS="${THREADS:-4}"                              # honour an externally-set THREADS, otherwise default to 4
+# honour an externally-set THREADS, otherwise default to 4
+THREADS="${THREADS:-4}"
 export THREADS                                       # export so child tools/scripts inherit it
-PROVIRUS_INPUT_MASKED="${PROVIRUS_INPUT_MASKED:-0}"  # 0 = raw reads (Path B, mask then strip); 1 = input already N-masked (Path A, just strip)
+# 0 = raw reads (Path B, mask then strip); 1 = input already N-masked (Path A, just strip)
+PROVIRUS_INPUT_MASKED="${PROVIRUS_INPUT_MASKED:-0}"
 
 # Resolve the cleanest available reads for a sample: prefer deduped, then
 # Kraken2-cleaned, then filtered, then raw.
-resolve_reads() {                                    # pick the best available reads for a sample, echoing the chosen path
+# pick the best available reads for a sample, echoing the chosen path
+resolve_reads() {
     local srr="$1"                                   # arg 1 = accession/sample id
-    local lm="${RAW_DIR}/local_masked"               # dir holding user-supplied pre-masked SMRTcap FASTAs (Path A)
+    # dir holding user-supplied pre-masked SMRTcap FASTAs (Path A)
+    local lm="${RAW_DIR}/local_masked"
     # Highest priority: user-provided local host-N-masked HiFi (Path A). The
     # SMRTcap naming is "<sample>.fastq.hiv.unmasked.fa" -- "unmasked" = the HIV
     # provirus is the unmasked (ACGT) part, host is N-masked. Search RECURSIVELY
@@ -55,41 +73,55 @@ resolve_reads() {                                    # pick the best available r
     # name, then any .fa/.fasta whose basename starts with the sample id.
     if [ -d "${lm}" ]; then                          # only search if a local_masked dir exists
         local hit                                    # will hold the matched pre-masked file, if any
-        hit=$(find "${lm}" -type f -iname "${srr}.fastq.hiv.unmasked.fa" 2>/dev/null | head -1)  # prefer the exact SMRTcap name (recursive, case-insensitive)
-        [ -z "${hit}" ] && hit=$(find "${lm}" -type f \( -iname "${srr}*.fa" -o -iname "${srr}*.fasta" \) 2>/dev/null | head -1)  # else any .fa/.fasta whose basename starts with the sample id
-        [ -n "${hit}" ] && [ -s "${hit}" ] && { echo "${hit}"; return; }  # if a non-empty match was found, use it (Path A) and stop
+        # prefer the exact SMRTcap name (recursive, case-insensitive)
+        hit=$(find "${lm}" -type f -iname "${srr}.fastq.hiv.unmasked.fa" 2>/dev/null | head -1)
+        # else any .fa/.fasta whose basename starts with the sample id
+        [ -z "${hit}" ] && hit=$(find "${lm}" -type f \( -iname "${srr}*.fa" -o -iname "${srr}*.fasta" \) 2>/dev/null | head -1)
+        # if a non-empty match was found, use it (Path A) and stop
+        [ -n "${hit}" ] && [ -s "${hit}" ] && { echo "${hit}"; return; }
     fi
+    # otherwise try QC outputs from cleanest to rawest, then raw reads
     for cand in \
         "${QC_DIR}/dedup_fastp_out/${srr}.dedup.fastq.gz" \
         "${QC_DIR}/kraken2_fastp_out/${srr}.kraken_filtered.fastq.gz" \
         "${QC_DIR}/fastp_out/${srr}.filtered.fastq.gz" \
-        "${RAW_DIR}/${srr}.fastq.gz"; do             # otherwise try QC outputs from cleanest to rawest, then raw reads
-        [ -s "${cand}" ] && { echo "${cand}"; return; }  # return the first candidate that exists and is non-empty
+        "${RAW_DIR}/${srr}.fastq.gz"; do
+        # return the first candidate that exists and is non-empty
+        [ -s "${cand}" ] && { echo "${cand}"; return; }
     done
-    echo ""                                          # nothing usable found; echo empty so the caller can detect it
+    # nothing usable found; echo empty so the caller can detect it
+    echo ""
 }
 
-for SRR in $(subset_accessions pacbio "${REPO_ROOT}/scripts/common/subset_samples.tsv"); do  # loop over just the PacBio accessions chosen for this comparison
+# loop over just the PacBio accessions chosen for this comparison
+for SRR in $(subset_accessions pacbio "${REPO_ROOT}/scripts/common/subset_samples.tsv"); do
     READS="$(resolve_reads "${SRR}")"                # locate the best input reads for this sample
     if [ -z "${READS}" ]; then                       # if none were found...
-        echo "WARNING: no reads found for ${SRR} (run download + download_qc first), skipping." >&2  # ...warn...
+        # ...warn...
+        echo "WARNING: no reads found for ${SRR} (run download + download_qc first), skipping." >&2
         continue                                     # ...and move on to the next sample
     fi
-    echo "=== proviral extraction for ${SRR} (input: ${READS##*/}) ==="  # progress marker showing which input was picked
+    # progress marker showing which input was picked
+    echo "=== proviral extraction for ${SRR} (input: ${READS##*/}) ==="
 
-    MASKED="${MASK_DIR}/${SRR}.masked.fasta"         # host-N-masked FASTA (produced or converted below)
-    TIMELOG="${RESULTS_DIR}/extract_${SRR}.time"     # file where measure_and_run records wallclock/RSS for the strip step
+    # host-N-masked FASTA (produced or converted below)
+    MASKED="${MASK_DIR}/${SRR}.masked.fasta"
+    # file where measure_and_run records wallclock/RSS for the strip step
+    TIMELOG="${RESULTS_DIR}/extract_${SRR}.time"
     LOG="${RESULTS_DIR}/extract_${SRR}.log"          # captured stdout+stderr for this sample
     PROVIRUS="${RESULTS_DIR}/${SRR}.provirus.fasta"  # final proviral cores output
-    COORDS="${RESULTS_DIR}/${SRR}.provirus_coords.tsv"  # per-read provenance (lead/trail N, core length, status)
+    # per-read provenance (lead/trail N, core length, status)
+    COORDS="${RESULTS_DIR}/${SRR}.provirus_coords.tsv"
 
     if [ "${PROVIRUS_INPUT_MASKED}" = "1" ]; then    # Path A: input is already host-N-masked
         # Path A: input already N-masked; convert fastq->fasta if needed.
         case "${READS}" in                           # normalise the input to a FASTA at ${MASKED}
-            *.fastq.gz|*.fq.gz) seqkit fq2fa "${READS}" -o "${MASKED}" 2>/dev/null ;;  # fastq input: convert to fasta
+            # fastq input: convert to fasta
+            *.fastq.gz|*.fq.gz) seqkit fq2fa "${READS}" -o "${MASKED}" 2>/dev/null ;;
             *) cp "${READS}" "${MASKED}" ;;          # already fasta: just copy it into place
         esac
-    else                                             # Path B: raw reads, build the masked form by mapping to HXB2
+    # Path B: raw reads, build the masked form by mapping to HXB2
+    else
         # Path B: build the N-masked form by mapping to HXB2 and masking the
         # soft-clipped (host) read ends. -F 0x904 keeps only primary mapped
         # alignments (drops unmapped 0x4, secondary 0x100, supplementary
@@ -113,27 +145,38 @@ for SRR in $(subset_accessions pacbio "${REPO_ROOT}/scripts/common/subset_sample
             ' > "${MASKED}" 2>>"${LOG}"          # minimap2 (HiFi preset) -> keep only primary mapped reads (-F 0x904) -> N-mask soft-clipped host ends
     fi
 
-    N_MASKED=$(grep -c "^>" "${MASKED}" 2>/dev/null || echo 0)  # number of reads that mapped to HIV and made it into the masked FASTA
+    # number of reads that mapped to HIV and made it into the masked FASTA
+    N_MASKED=$(grep -c "^>" "${MASKED}" 2>/dev/null || echo 0)
     if [ "${N_MASKED}" -eq 0 ]; then                 # no HIV-mapping reads means nothing to extract
-        echo "WARNING: no HIV-mapping reads for ${SRR}; no provirus extracted." >&2  # warn on stderr
-        append_summary_row "proviral_extraction_pacbio" "minimap2mask+strip" "${SRR}" "" "" "1" "0" "0 reads mapped to HXB2"  # record a zero-result row and move on
+        # warn on stderr
+        echo "WARNING: no HIV-mapping reads for ${SRR}; no provirus extracted." >&2
+        # record a zero-result row and move on
+        append_summary_row "proviral_extraction_pacbio" "minimap2mask+strip" "${SRR}" "" "" "1" "0" "0 reads mapped to HXB2"
         continue                                     # skip the strip step for this sample
     fi
 
     # The requested step: strip host N-flanks -> proviral cores.
+    # time+run the N-flank stripper to produce the proviral cores and coords
     measure_and_run "${TIMELOG}" -- \
-        "${STRIP_TOOL}" "${MASKED}" "${PROVIRUS}" "${COORDS}" >> "${LOG}" 2>&1  # time+run the N-flank stripper to produce the proviral cores and coords
-    EXIT_CODE=$?                                     # capture the strip tool's exit status before $? is overwritten
-    parse_time_metrics "${TIMELOG}"                  # set WALLCLOCK_SEC / PEAK_RSS_MB globals from the .time file
+        "${STRIP_TOOL}" "${MASKED}" "${PROVIRUS}" "${COORDS}" >> "${LOG}" 2>&1
+    # capture the strip tool's exit status before $? is overwritten
+    EXIT_CODE=$?
+    # set WALLCLOCK_SEC / PEAK_RSS_MB globals from the .time file
+    parse_time_metrics "${TIMELOG}"
 
-    N_PROV=$(grep -c "^>" "${PROVIRUS}" 2>/dev/null || echo 0)  # number of reads that yielded a non-empty proviral core
+    # number of reads that yielded a non-empty proviral core
+    N_PROV=$(grep -c "^>" "${PROVIRUS}" 2>/dev/null || echo 0)
     VALID=0; METRIC="n/a"                            # assume invalid until proven otherwise
     if [ "${N_PROV}" -gt 0 ]; then                   # at least one core extracted = success
         VALID=1                                      # mark valid
-        MEDLEN=$(awk -F'\t' 'NR>1 && $8=="kept"{print $5}' "${COORDS}" 2>/dev/null | sort -n | awk '{a[NR]=$1} END{if(NR)print (NR%2)?a[(NR+1)/2]:int((a[NR/2]+a[NR/2+1])/2)}')  # median core length over kept reads
-        METRIC="${N_PROV}/${N_MASKED} reads yielded a proviral core; median core ${MEDLEN:-?}bp"  # human-readable key metric
+        # median core length over kept reads
+        MEDLEN=$(awk -F'\t' 'NR>1 && $8=="kept"{print $5}' "${COORDS}" 2>/dev/null | sort -n | awk '{a[NR]=$1} END{if(NR)print (NR%2)?a[(NR+1)/2]:int((a[NR/2]+a[NR/2+1])/2)}')
+        # human-readable key metric
+        METRIC="${N_PROV}/${N_MASKED} reads yielded a proviral core; median core ${MEDLEN:-?}bp"
     fi
-    append_summary_row "proviral_extraction_pacbio" "minimap2mask+strip" "${SRR}" "${WALLCLOCK_SEC}" "${PEAK_RSS_MB}" "${EXIT_CODE}" "${VALID}" "${METRIC}"  # write this sample's row to summary.tsv
+    # write this sample's row to summary.tsv
+    append_summary_row "proviral_extraction_pacbio" "minimap2mask+strip" "${SRR}" "${WALLCLOCK_SEC}" "${PEAK_RSS_MB}" "${EXIT_CODE}" "${VALID}" "${METRIC}"
 done
 
-echo "Done. Proviral cores in ${RESULTS_DIR}/<SRR>.provirus.fasta ; see ${SUMMARY_TSV}"  # final confirmation pointing at the outputs
+# final confirmation pointing at the outputs
+echo "Done. Proviral cores in ${RESULTS_DIR}/<SRR>.provirus.fasta ; see ${SUMMARY_TSV}"

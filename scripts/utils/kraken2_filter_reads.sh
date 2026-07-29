@@ -19,18 +19,23 @@
 #   <OUTDIR>/<SAMPLE_NAME>_1.kraken_filtered.fastq.gz
 #   <OUTDIR>/<SAMPLE_NAME>_2.kraken_filtered.fastq.gz
 #   <OUTDIR>/<SAMPLE_NAME>.kreport   (Kraken2's own hierarchical report)
-set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
-R1="$1" R2="$2" OUTDIR="$3" SAMPLE="$4" KRAKEN2_DB="$5"  # positional args: R1/R2 inputs, output dir, sample name, Kraken2 DB dir
+# -u errors on unset vars, pipefail fails a pipe if any stage fails
+set -uo pipefail
+# positional args: R1/R2 inputs, output dir, sample name, Kraken2 DB dir
+R1="$1" R2="$2" OUTDIR="$3" SAMPLE="$4" KRAKEN2_DB="$5"
 
-NODES_DMP="${KRAKEN2_DB}/nodes.dmp"                   # taxonomy tree bundled with the DB, used for the ancestor walk
-[ -s "${NODES_DMP}" ] || { echo "ERROR: ${NODES_DMP} not found -- is KRAKEN2_DB (${KRAKEN2_DB}) an extracted Kraken2 database?" >&2; exit 1; }  # bail if the DB isn't a real extracted Kraken2 database
+# taxonomy tree bundled with the DB, used for the ancestor walk
+NODES_DMP="${KRAKEN2_DB}/nodes.dmp"
+# bail if the DB isn't a real extracted Kraken2 database
+[ -s "${NODES_DMP}" ] || { echo "ERROR: ${NODES_DMP} not found -- is KRAKEN2_DB (${KRAKEN2_DB}) an extracted Kraken2 database?" >&2; exit 1; }
 
 mkdir -p "${OUTDIR}"                                  # ensure the output dir exists
 
+# classify read pairs against the DB; per-pair output + hierarchical report
 kraken2 --db "${KRAKEN2_DB}" --paired --gzip-compressed --threads "${THREADS:-4}" \
     --output "${OUTDIR}/${SAMPLE}.kraken" \
     --report "${OUTDIR}/${SAMPLE}.kreport" \
-    "${R1}" "${R2}"                                   # classify read pairs against the DB; per-pair output + hierarchical report
+    "${R1}" "${R2}"
 
 # nodes.dmp fields are separated by "\t|\t" (taxid | parent_taxid | rank | ...);
 # Kraken2's own --output is plain-tab-separated (C/U, read_id, taxid,
@@ -68,8 +73,10 @@ awk '
 ' "${NODES_DMP}" "${OUTDIR}/${SAMPLE}.kraken" > "${OUTDIR}/${SAMPLE}.keep_read_ids.txt"  # write the keep-list of read ids
 
 N_TOTAL=$(wc -l < "${OUTDIR}/${SAMPLE}.kraken")              # total classified read pairs
-N_KEEP=$(wc -l < "${OUTDIR}/${SAMPLE}.keep_read_ids.txt")   # pairs kept after host/bacterial removal
-echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} read pairs retained (human/bacterial reads discarded)." >&2  # progress summary to stderr
+# pairs kept after host/bacterial removal
+N_KEEP=$(wc -l < "${OUTDIR}/${SAMPLE}.keep_read_ids.txt")
+# progress summary to stderr
+echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} read pairs retained (human/bacterial reads discarded)." >&2
 
 # No -n/--by-name here: seqkit's default match target is the ID (text
 # before the first space), which is exactly what keep_read_ids.txt
@@ -77,5 +84,7 @@ echo "Kraken2 filtering for ${SAMPLE}: ${N_KEEP}/${N_TOTAL} read pairs retained 
 # exact whole-string match per seqkit's own docs, not substring), which
 # silently matched nothing against these bare IDs and was a real bug
 # caught during testing (0-byte output despite a correct ID list).
-seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R1}" -o "${OUTDIR}/${SAMPLE}_1.kraken_filtered.fastq.gz"  # subset R1 to the kept ids (same id list keeps pairs in sync)
-seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R2}" -o "${OUTDIR}/${SAMPLE}_2.kraken_filtered.fastq.gz"  # subset R2 to the same kept ids
+# subset R1 to the kept ids (same id list keeps pairs in sync)
+seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R1}" -o "${OUTDIR}/${SAMPLE}_1.kraken_filtered.fastq.gz"
+# subset R2 to the same kept ids
+seqkit grep -f "${OUTDIR}/${SAMPLE}.keep_read_ids.txt" "${R2}" -o "${OUTDIR}/${SAMPLE}_2.kraken_filtered.fastq.gz"

@@ -8,8 +8,11 @@
 # With no reference specified, the FIRST sequence in the FASTA is used as
 # the reference -- so INPUT_FASTA must have HXB2 as its first record.
 # Usage: run_poplars.sh <INPUT_FASTA_HXB2_FIRST> <OUT_TSV>
-set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
-IN="$1" OUT="$2"                                     # positional args: input FASTA (HXB2 first) and output TSV path
+# -u errors on unset vars, pipefail fails a pipe if any stage fails
+set -uo pipefail
+# positional args: input FASTA (HXB2 first) and output TSV path
+IN="$1" OUT="$2"
 STAGE_DIR="$(cd "$(dirname "$0")" && pwd)"           # absolute path of this script's own dir
 REPO_ROOT="$(cd "${STAGE_DIR}/../../.." && pwd)"     # repo top-level (three dirs up)
-python3 "${REPO_ROOT}/scripts/tools/Poplars/poplars/hypermut.py" "${IN}" --out "${OUT}"  # run hypermut.py directly (no working entry point); first seq is the reference
+# run hypermut.py directly (no working entry point); first seq is the reference
+python3 "${REPO_ROOT}/scripts/tools/Poplars/poplars/hypermut.py" "${IN}" --out "${OUT}"

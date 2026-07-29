@@ -41,16 +41,22 @@
 #       --out-gapped motifs/U3_aligned.fasta \
 #       --out motifs/U3_extracted.fasta \
 #       --warnings-log motifs/u3_extraction_warnings.log
-set -uo pipefail                                     # -u errors on unset vars, pipefail fails a pipe if any stage fails
+# -u errors on unset vars, pipefail fails a pipe if any stage fails
+set -uo pipefail
 
-EUTILS_URL_TMPL="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=gb&retmode=text"  # NCBI efetch URL template to pull a GenBank record by accession
+# NCBI efetch URL template to pull a GenBank record by accession
+EUTILS_URL_TMPL="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=gb&retmode=text"
 
 # Length/identity tolerance for the outlier safety net.
-MIN_U3_LEN=400                                       # shortest plausible U3; anything below is flagged for review
-MAX_U3_LEN=500                                       # longest plausible U3; anything above is flagged for review
-MIN_IDENTITY_PCT=70.0                                # minimum % identity to HXB2 U3 before a sequence is flagged
+# shortest plausible U3; anything below is flagged for review
+MIN_U3_LEN=400
+# longest plausible U3; anything above is flagged for review
+MAX_U3_LEN=500
+# minimum % identity to HXB2 U3 before a sequence is flagged
+MIN_IDENTITY_PCT=70.0
 
-HXB2_ID="K03455.1"                                   # default HXB2 accession; overridable via --hxb2-id
+# default HXB2 accession; overridable via --hxb2-id
+HXB2_ID="K03455.1"
 
 while [ $# -gt 0 ]; do                               # parse long-form CLI options
     case "$1" in                                     # dispatch on the current flag
@@ -65,7 +71,8 @@ while [ $# -gt 0 ]; do                               # parse long-form CLI optio
 done
 
 for var in ALIGNMENT GB_CACHE OUT_GAPPED OUT WARNINGS_LOG; do  # every one of these is mandatory
-    if [ -z "${!var:-}" ]; then                      # indirect-expand each name; empty = not supplied
+    # indirect-expand each name; empty = not supplied
+    if [ -z "${!var:-}" ]; then
         echo "ERROR: missing required argument for ${var}" >&2  # say which one is missing
         exit 1                                       # and abort
     fi
@@ -76,10 +83,12 @@ if [ ! -s "${ALIGNMENT}" ]; then                     # the alignment must exist 
     exit 1
 fi
 
-if [ ! -s "${GB_CACHE}" ]; then                      # fetch HXB2's GenBank record only if not already cached
+# fetch HXB2's GenBank record only if not already cached
+if [ ! -s "${GB_CACHE}" ]; then
     mkdir -p "$(dirname "${GB_CACHE}")"              # ensure the cache dir exists
     URL=$(printf "${EUTILS_URL_TMPL}" "${HXB2_ID}")  # fill the accession into the efetch URL
-    curl -s "${URL}" -o "${GB_CACHE}"                # download the GenBank record quietly to the cache
+    # download the GenBank record quietly to the cache
+    curl -s "${URL}" -o "${GB_CACHE}"
     if [ ! -s "${GB_CACHE}" ]; then                  # guard against an empty/failed download
         echo "ERROR: empty GenBank response for ${HXB2_ID}" >&2  # report it
         exit 1                                       # and abort rather than parse garbage
@@ -93,7 +102,8 @@ fi
 # start with optional whitespace then '/'. "3'" copies are excluded by
 # requiring the note NOT contain "3" -- the only two repeat_region notes in
 # HXB2's record are the 5'/3' LTR pair and the 5'/3' R-repeat pair.
-read -r LTR_START R_START <<EOF                      # capture the two 0-based coordinates awk prints below
+# capture the two 0-based coordinates awk prints below
+read -r LTR_START R_START <<EOF
 $(awk '
 /^[[:space:]]*\// {                                  # a qualifier line (starts with optional whitespace then /)
     if ($0 ~ /\/note=/ && pending_type == "repeat_region") {  # a /note on the repeat_region feature we just saw
@@ -126,16 +136,21 @@ END {
 ' "${GB_CACHE}")
 EOF
 if [ -z "${LTR_START:-}" ] || [ -z "${R_START:-}" ]; then  # awk must have produced both coordinates
-    echo "ERROR: failed to parse 5' LTR / R-repeat coordinates from ${GB_CACHE}. Inspect its FEATURES table and adjust the note-matching logic if this reference's annotation conventions differ from HXB2's." >&2  # guide the user if parsing failed
+    # guide the user if parsing failed
+    echo "ERROR: failed to parse 5' LTR / R-repeat coordinates from ${GB_CACHE}. Inspect its FEATURES table and adjust the note-matching logic if this reference's annotation conventions differ from HXB2's." >&2
     exit 1
 fi
-if [ "${R_START}" -le "${LTR_START}" ]; then         # U3 = [LTR_start, R_start), so R must come after the LTR start
-    echo "ERROR: R-region start (${R_START}) is not after LTR start (${LTR_START}) -- unexpected annotation, refusing to guess." >&2  # sanity-fail rather than emit nonsense coords
+# U3 = [LTR_start, R_start), so R must come after the LTR start
+if [ "${R_START}" -le "${LTR_START}" ]; then
+    # sanity-fail rather than emit nonsense coords
+    echo "ERROR: R-region start (${R_START}) is not after LTR start (${LTR_START}) -- unexpected annotation, refusing to guess." >&2
     exit 1
 fi
-echo "HXB2 U3 genome coordinates (0-based, half-open): [${LTR_START}, ${R_START}) ($((R_START - LTR_START)) nt)" >&2  # log the resolved U3 window and its length
+# log the resolved U3 window and its length
+echo "HXB2 U3 genome coordinates (0-based, half-open): [${LTR_START}, ${R_START}) ($((R_START - LTR_START)) nt)" >&2
 
-mkdir -p "$(dirname "${OUT_GAPPED}")" "$(dirname "${OUT}")" "$(dirname "${WARNINGS_LOG}")"  # ensure all three output dirs exist
+# ensure all three output dirs exist
+mkdir -p "$(dirname "${OUT_GAPPED}")" "$(dirname "${OUT}")" "$(dirname "${WARNINGS_LOG}")"
 
 # --- Liftover HXB2's genome coordinates to alignment columns, slice every
 # record, strip gaps, and run the outlier safety net -- all in one pass

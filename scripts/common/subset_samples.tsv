@@ -10,8 +10,15 @@ pacbio	124_4	0.3	user-provided host-N-masked HIV-SMRTcap HiFi (41 CCS reads, ~57
 pacbio	128_5	0.4	user-provided host-N-masked HIV-SMRTcap HiFi (75 CCS reads, ~0.2% host-N, near-full proviral reads)
 pacbio	203_3	0.2	user-provided host-N-masked HIV-SMRTcap HiFi (19 CCS reads, ~78% host-N)
 pacbio	211_0	0.2	user-provided host-N-masked HIV-SMRTcap HiFi (30 CCS reads, ~43% host-N)
-# SRA QC-comparison download set (separate, driven by download_pacbio.slurm.sh, not the analysis subset above):
-#   SRR33251355/58/57 (Rakai donor13/17), SRR33168808 (92UG_029=A1), SRR33168806 (93UG_065=D)
+# SRA QC-comparison set, tagged `pacbio_sra` so it is a separate list from the `pacbio`
+# analysis subset above: the masked four enter the harness at proviral extraction (already
+# QC'd upstream), so the QC-tool comparison needs raw HiFi reads, which these are.
+# Fetched by download_pacbio.slurm.sh, consumed by download_qc_pacbio.sh.
+pacbio_sra	SRR33251355	1462	Rakai Uganda cohort HiFi run (RAKAIUG donor13/17); smallest of the five, cheap sanity check
+pacbio_sra	SRR33168808	2422	LANL 92UG_029 (subtype A1) known-subtype anchor / positive control
+pacbio_sra	SRR33168806	2187	LANL 93UG_065 (subtype D) known-subtype anchor / positive control
+pacbio_sra	SRR33251358	3074	Rakai Uganda cohort HiFi run (RAKAIUG donor13/17)
+pacbio_sra	SRR33251357	3289	Rakai Uganda cohort HiFi run (RAKAIUG donor13/17); largest, stresses runtime/memory scaling
 
 # Chosen by file-size quartile spread (a complexity/read-depth proxy, not a
 # subtype proxy -- all 24/9 raw files are already downloaded, so this costs

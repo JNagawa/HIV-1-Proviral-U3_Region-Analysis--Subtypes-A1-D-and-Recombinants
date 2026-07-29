@@ -12,48 +12,62 @@
 #              │                                          │        └─> motif_mapping
 #              └────────────────────────────────────────>└─> biological_filtering
 # Usage: bash scripts/utils/run_pacbio_chain.sh
-set -euo pipefail                                    # -e abort on error, -u on unset vars, pipefail on any failed pipe stage
+# -e abort on error, -u on unset vars, pipefail on any failed pipe stage
+set -euo pipefail
 
-cd /etc/ace-data/home/jnagawa/Internship             # run from the repo root so relative script paths resolve
-W=scripts/utils/run_comparison_step.slurm.sh         # generic sbatch wrapper used to launch every comparison step
-ENVJOB=scripts/utils/setup_pacbio_env.slurm.sh       # the env-setup job that installs hifiasm/chopper/bc
+# run from the repo root so relative script paths resolve
+cd /etc/ace-data/home/jnagawa/Internship
+# generic sbatch wrapper used to launch every comparison step
+W=scripts/utils/run_comparison_step.slurm.sh
+# the env-setup job that installs hifiasm/chopper/bc
+ENVJOB=scripts/utils/setup_pacbio_env.slurm.sh
 
 # Sanity: HiFi data present?
-if ! ls data/raw/pacbio/*.fastq.gz >/dev/null 2>&1; then  # refuse to submit if the raw HiFi data isn't downloaded yet
-    echo "ERROR: no data/raw/pacbio/*.fastq.gz -- run/await scripts/download_qc/pacbio/download_pacbio.slurm.sh first." >&2  # tell the user what to run first
+# refuse to submit if the raw HiFi data isn't downloaded yet
+if ! ls data/raw/pacbio/*.fastq.gz >/dev/null 2>&1; then
+    # tell the user what to run first
+    echo "ERROR: no data/raw/pacbio/*.fastq.gz -- run/await scripts/download_qc/pacbio/download_pacbio.slurm.sh first." >&2
     exit 1
 fi
 
-ENV=$(sbatch --parsable "${ENVJOB}")                 # submit env-setup first; --parsable captures just the job id
+# submit env-setup first; --parsable captures just the job id
+ENV=$(sbatch --parsable "${ENVJOB}")
 echo "env-setup           = ${ENV}"                  # print its job id
 
+# QC step, runs only after env-setup succeeds
 QC=$(sbatch --parsable --job-name=pb_download_qc --dependency=afterok:${ENV} \
-     "${W}" scripts/download_qc/pacbio/download_qc_pacbio.sh)  # QC step, runs only after env-setup succeeds
+     "${W}" scripts/download_qc/pacbio/download_qc_pacbio.sh)
 echo "download_qc (afterok:${ENV}) = ${QC}"          # print its job id and dependency
 
+# extraction, after QC succeeds
 EXT=$(sbatch --parsable --job-name=pb_extraction --dependency=afterok:${QC} \
-      "${W}" scripts/proviral_extraction/pacbio/extract_provirus_pacbio.sh)  # extraction, after QC succeeds
+      "${W}" scripts/proviral_extraction/pacbio/extract_provirus_pacbio.sh)
 echo "extraction (afterok:${QC}) = ${EXT}"           # print its job id and dependency
 
+# assembly (longer walltime), after extraction succeeds
 ASM=$(sbatch --parsable --job-name=pb_assembly --time=24:00:00 --dependency=afterok:${EXT} \
-      "${W}" scripts/assembly/pacbio/compare_assembly_pacbio.sh)  # assembly (longer walltime), after extraction succeeds
+      "${W}" scripts/assembly/pacbio/compare_assembly_pacbio.sh)
 echo "assembly (afterok:${EXT}) = ${ASM}"            # print its job id and dependency
 
+# multiple-sequence alignment, after assembly succeeds
 MSA=$(sbatch --parsable --job-name=pb_msa --dependency=afterok:${ASM} \
-      "${W}" scripts/msa/pacbio/compare_msa_pacbio.sh)  # multiple-sequence alignment, after assembly succeeds
+      "${W}" scripts/msa/pacbio/compare_msa_pacbio.sh)
 echo "msa (afterok:${ASM}) = ${MSA}"                 # print its job id and dependency
 
+# biological filtering, also branches off assembly
 BIO=$(sbatch --parsable --job-name=pb_biofilt --dependency=afterok:${ASM} \
-      "${W}" scripts/biological_filtering/pacbio/compare_biological_filtering_pacbio.sh)  # biological filtering, also branches off assembly
+      "${W}" scripts/biological_filtering/pacbio/compare_biological_filtering_pacbio.sh)
 echo "biofilt (afterok:${ASM}) = ${BIO}"             # print its job id and dependency
 
 SUB=$(sbatch --parsable --job-name=pb_subtyping --dependency=afterok:${MSA} \
       "${W}" scripts/subtyping/pacbio/compare_subtyping_pacbio.sh)  # subtyping, after MSA succeeds
 echo "subtyping (afterok:${MSA}) = ${SUB}"           # print its job id and dependency
 
+# motif mapping, also branches off MSA
 MOT=$(sbatch --parsable --job-name=pb_motif --dependency=afterok:${MSA} \
-      "${W}" scripts/motif_mapping/pacbio/compare_motif_mapping_pacbio.sh)  # motif mapping, also branches off MSA
+      "${W}" scripts/motif_mapping/pacbio/compare_motif_mapping_pacbio.sh)
 echo "motif (afterok:${MSA}) = ${MOT}"               # print its job id and dependency
 
-echo "${ENV} ${QC} ${EXT} ${ASM} ${MSA} ${BIO} ${SUB} ${MOT}"  # one line with all submitted job ids for easy scancel/squeue
+# one line with all submitted job ids for easy scancel/squeue
+echo "${ENV} ${QC} ${EXT} ${ASM} ${MSA} ${BIO} ${SUB} ${MOT}"
 echo "--- PacBio chain submitted ---"                # done marker
