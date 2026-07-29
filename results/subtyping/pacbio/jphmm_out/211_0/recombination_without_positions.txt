@@ -7,3 +7,4 @@
 #
 # predicted recombination of the following sequence(s): 
 
+>211_0	bw=1e-20, jp=1e-09	A1BD

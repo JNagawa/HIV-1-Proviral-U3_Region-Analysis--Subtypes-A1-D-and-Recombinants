@@ -1,3 +1,15 @@
 # Output of the jpHMM. 
 #
 # Predicted recombination for the following query sequences:
+#
+# predicted subtypes for sequence '211_0': 
+211_0	jpHMM	5'-Insertion	0	788	.	+	.
+211_0	jpHMM	D	789	2114	.	+	.
+211_0	jpHMM	A1	2115	2547	.	+	.
+211_0	jpHMM	D	2548	3298	.	+	.
+211_0	jpHMM	A1	3299	3459	.	+	.
+211_0	jpHMM	D	3460	4004	.	+	.
+211_0	jpHMM	A1	4005	5937	.	+	.
+211_0	jpHMM	B	5938	9410	.	+	.
+211_0	jpHMM	3'-Insertion	9411	9718	.	+	.
+
