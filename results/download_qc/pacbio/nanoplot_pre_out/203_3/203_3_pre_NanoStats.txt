@@ -1,0 +1,12 @@
+Metrics	dataset
+number_of_reads	19
+number_of_bases	157023.0
+median_read_length	8265.0
+mean_read_length	8264.4
+read_length_stdev	6.8
+n50	8265.0
+longest_read_(with_Q):1	8274 (0)
+longest_read_(with_Q):2	8272 (0)
+longest_read_(with_Q):3	8272 (0)
+longest_read_(with_Q):4	8269 (0)
+longest_read_(with_Q):5	8266 (0)

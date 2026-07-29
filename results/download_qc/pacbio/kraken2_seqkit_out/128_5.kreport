@@ -1,0 +1,12 @@
+100.00	75	0	R	1	root
+100.00	75	0	R1	10239	  Viruses
+100.00	75	0	R2	2559587	    Riboviria
+100.00	75	0	K	2732397	      Pararnavirae
+100.00	75	0	P	2732409	        Artverviricota
+100.00	75	0	C	2732514	          Revtraviricetes
+100.00	75	0	O	2169561	            Ortervirales
+100.00	75	0	F	11632	              Retroviridae
+100.00	75	0	F1	327045	                Orthoretrovirinae
+100.00	75	0	G	11646	                  Lentivirus
+100.00	75	0	S	3418650	                    Lentivirus humimdef1
+100.00	75	75	S1	11676	                      Human immunodeficiency virus 1

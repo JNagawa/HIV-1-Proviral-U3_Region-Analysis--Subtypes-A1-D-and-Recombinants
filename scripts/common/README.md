@@ -104,7 +104,7 @@ tools. Steps and comparisons:
 | Dir | Script | Compares | Notes |
 |---|---|---|---|
 | (download) | `download_qc/pacbio/download_pacbio.slurm.sh` | -- | `sbatch` job: prefetch + fasterq-dump the subset into `data/raw/pacbio/`. Multi-GB HiFi, so its own job. |
-| `download_qc/pacbio` | `download_qc_pacbio.sh` | NanoFilt vs fastp vs chopper (filter); fastp vs seqkit (dedup) | NanoPlot QC + single-end Kraken2 host removal (`utils/kraken2_filter_reads_se.sh`) between them. |
+| `download_qc/pacbio` | `download_qc_pacbio.sh` | FASTQ: NanoFilt vs fastp vs chopper (filter), fastp vs seqkit (dedup). FASTA: seqkit vs awk for both. | **Self-contained** -- every step from the host-N strip onward is inlined, no helper scripts. Detects FASTA/FASTQ from the data (SMRTcap files are named `.fa` but the extension lies), strips host-N flanks, orients all reads forward (name ends `/0`=fwd, `/1`=rev), then NanoPlot (pre+post strip) -> filter -> single-end Kraken2 host removal -> dedup. Input is resolved locally first, downloaded only as a fallback. |
 | `proviral_extraction/pacbio` | `extract_provirus_pacbio.sh` | (single method) | **The special step.** N-masks host flanks (minimap2->HXB2, soft-clip = host) then strips them with `utils/extract_provirus_strip_hostN.sh` to recover the ACGT proviral core. `PROVIRUS_INPUT_MASKED=1` skips masking if input is already host-N-masked. |
 | `assembly/pacbio` | `compare_assembly_pacbio.sh` | minimap2->HXB2 consensus vs hifiasm | reference-guided vs de novo, mirroring Illumina bwa-vs-SPAdes. hifiasm is the HiFi de novo assembler (review names none). |
 | `msa/pacbio` | `compare_msa_pacbio.sh` | MAFFT vs MUSCLE vs Clustal Omega | reuses `scripts/msa/illumina/run_*.sh`. |

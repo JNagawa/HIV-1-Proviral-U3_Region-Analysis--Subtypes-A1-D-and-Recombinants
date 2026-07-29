@@ -11,14 +11,21 @@
 # bases (including a stray ambiguous base inside the provirus) are preserved,
 # so a genuine internal N never truncates the genome.
 #
-# Bash/awk/seqkit only (no Python), matching this repo's convention. seqkit is
-# used purely to linearise multi-line FASTA (fx2tab) and re-wrap it (tab2fx);
-# all the stripping logic is awk.
+# Handles BOTH FASTA and FASTQ input, detected from the first record rather
+# than the filename (the SMRTcap files are named "*.fastq.hiv.unmasked.fa" but
+# hold FASTA, so the extension cannot be trusted). For FASTQ the quality string
+# is sliced with exactly the same coordinates as the sequence, so bases and
+# their qualities stay in register and the output is a valid FASTQ.
 #
-# Usage: extract_provirus_strip_hostN.sh <in.fasta[.gz]> <out_provirus.fasta> [coords.tsv]
-#   in.fasta      host-N-masked reads/consensus (FASTA or FASTA.gz)
+# Bash/awk/seqkit only (no Python), matching this repo's convention. seqkit is
+# used purely to linearise records (fx2tab) and re-wrap them (tab2fx); all the
+# stripping logic is awk.
+#
+# Usage: extract_provirus_strip_hostN.sh <in.fast[aq][.gz]> <out_provirus> [coords.tsv]
+#   in            host-N-masked reads/consensus (FASTA or FASTQ, plain or .gz)
 #   out_provirus  proviral cores, one record per input record that had a
-#                 non-empty core (all-N / empty records are dropped)
+#                 non-empty core (all-N / empty records are dropped); written
+#                 in the SAME format as the input
 #   coords.tsv    optional provenance log; one row per INPUT record:
 #                 name  orig_len  lead_N  trail_N  provirus_len  prov_start  prov_end  status
 #                 (prov_start/prov_end are 1-based, inclusive, in original
@@ -27,8 +34,8 @@
 set -uo pipefail
 
 # arg 1 = host-N-masked input; :? prints usage and aborts if missing
-IN="${1:?usage: extract_provirus_strip_hostN.sh <in.fasta[.gz]> <out.fasta> [coords.tsv]}"
-OUT="${2:?missing output FASTA path}"                # arg 2 = where to write the proviral cores
+IN="${1:?usage: extract_provirus_strip_hostN.sh <in.fast[aq][.gz]> <out> [coords.tsv]}"
+OUT="${2:?missing output path}"                      # arg 2 = where to write the proviral cores
 # arg 3 = optional coords/provenance TSV (empty if not given)
 COORDS="${3:-}"
 
@@ -36,7 +43,7 @@ if [ ! -s "${IN}" ]; then                            # nothing to do without a n
     echo "ERROR: input '${IN}' not found or empty." >&2  # ...report the problem...
     exit 1                                           # ...and fail
 fi
-# seqkit does the FASTA linearise/re-wrap, so it must be present
+# seqkit does the record linearise/re-wrap, so it must be present
 if ! command -v seqkit >/dev/null 2>&1; then
     # tell the user how to get it
     echo "ERROR: seqkit not on PATH (conda activate HIV_U3analysis)." >&2
@@ -46,20 +53,50 @@ fi
 mkdir -p "$(dirname "${OUT}")"                       # make sure the output dir exists
 # and the coords dir too, only if a coords path was given
 [ -n "${COORDS}" ] && mkdir -p "$(dirname "${COORDS}")"
+# truncate any coords file from a previous run: the awk below APPENDS rows, so
+# without this a rerun would stack new rows onto the old ones
+[ -n "${COORDS}" ] && : > "${COORDS}"
 
-# fx2tab emits "name<TAB>sequence" (one line per record, sequence linearised).
+# Detect the record format from the first non-blank character of the data
+# itself ('>' = FASTA, '@' = FASTQ). zcat -f reads plain and gzipped files
+# alike, so this works for .gz input without a separate branch.
+FIRST_CHAR=$(zcat -f "${IN}" 2>/dev/null | awk 'NF{print substr($0,1,1); exit}')
+case "${FIRST_CHAR}" in
+    '>') FORMAT="fasta" ;;
+    '@') FORMAT="fastq" ;;
+    *)
+        # anything else is not sequence data we can strip
+        echo "ERROR: '${IN}' does not start with '>' or '@' -- not FASTA or FASTQ." >&2
+        exit 1 ;;
+esac
+
+# fx2tab emits "name<TAB>sequence" for FASTA. Adding -q appends the quality
+# string, and then an average-quality column that we must NOT pass on -- the
+# awk below prints exactly 2 or 3 fields so tab2fx re-wraps the right format.
 # -w0 (in tab2fx below) disables line wrapping so downstream length checks are
 # unambiguous. Case-insensitive N-stripping ([Nn]) covers masks written in
 # either case. The core is bases [lead+1 .. len-trail] of the original read.
-# scratch file (reserved for temp work; cleaned on exit)
-TMP_TAB="$(mktemp)"
-# always remove the temp file when the script exits
-trap 'rm -f "${TMP_TAB}"' EXIT
+if [ "${FORMAT}" = "fastq" ]; then
+    FX2TAB_OPTS="-q"                                 # carry the quality string through
+else
+    FX2TAB_OPTS=""                                   # FASTA has no quality column
+fi
 
-seqkit fx2tab "${IN}" 2>/dev/null | awk -F'\t' -v coords="${COORDS}" '  # linearise each record to name<TAB>seq, then strip N-flanks in awk
+# compress the output when the caller asks for a .gz path, so the QC harness can
+# hand this straight to tools that expect gzipped reads
+if [ "${OUT%.gz}" != "${OUT}" ]; then
+    OUT_CMD="gzip -c"                                # OUT ends in .gz
+else
+    OUT_CMD="cat"                                    # plain-text output
+fi
+
+# linearise each record, strip the N-flanks in awk, then re-wrap to the input format
+# shellcheck disable=SC2086
+zcat -f "${IN}" 2>/dev/null | seqkit fx2tab ${FX2TAB_OPTS} 2>/dev/null | awk -F'\t' -v coords="${COORDS}" -v fmt="${FORMAT}" '
     {
         name = $1                    # record name (first tab field)
         seq  = $2                    # linearised sequence (second tab field)
+        qual = (fmt == "fastq" ? $3 : "")  # quality string, FASTQ only
         orig = length(seq)           # original read length before stripping
 
         # leading N run
@@ -87,12 +124,16 @@ seqkit fx2tab "${IN}" 2>/dev/null | awk -F'\t' -v coords="${COORDS}" '  # linear
             next                     # emit no core
         }
 
-        # emit the core as name<TAB>seq for tab2fx to re-wrap into FASTA
-        printf "%s\t%s\n", name, core  # pass the kept core downstream to tab2fx
+        # emit the core for tab2fx to re-wrap; the quality string is cut with the
+        # SAME start/length as the sequence so bases and qualities stay aligned
+        if (fmt == "fastq")
+            printf "%s\t%s\t%s\n", name, core, substr(qual, prov_start, core_len)  # name<TAB>seq<TAB>qual -> FASTQ
+        else
+            printf "%s\t%s\n", name, core  # name<TAB>seq -> FASTA
         if (coords != "")            # and record its provenance if coords requested
             printf "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\n", name, orig, lead, trail, core_len, prov_start, prov_end, "kept" >> coords  # provenance row for a kept core
     }
-' | seqkit tab2fx -w0 > "${OUT}" 2>/dev/null         # re-wrap name<TAB>seq back into FASTA (-w0 = no line wrapping) as the output
+' | seqkit tab2fx -w0 2>/dev/null | ${OUT_CMD} > "${OUT}"  # re-wrap back into the input format (-w0 = no line wrapping), gzipping if asked
 
 # Prepend the coords header (awk appended rows without one, so it stays
 # valid even when run per-record above).
@@ -110,4 +151,4 @@ N_IN=$(seqkit stats -T "${IN}" 2>/dev/null | awk -F'\t' 'NR==2{print $4}')
 # number of output records that kept a core
 N_OUT=$(seqkit stats -T "${OUT}" 2>/dev/null | awk -F'\t' 'NR==2{print $4}')
 # summary line to stderr
-echo "extract_provirus_strip_hostN: ${N_OUT:-0}/${N_IN:-0} records had a non-empty proviral core -> ${OUT}" >&2
+echo "extract_provirus_strip_hostN: ${N_OUT:-0}/${N_IN:-0} records had a non-empty proviral core (${FORMAT}) -> ${OUT}" >&2
