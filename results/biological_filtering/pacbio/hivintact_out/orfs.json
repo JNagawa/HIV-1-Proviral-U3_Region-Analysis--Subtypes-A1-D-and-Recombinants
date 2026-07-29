@@ -16,23 +16,7 @@
             "end": 8794
         }
     ],
-    "124_4": [
-        {
-            "orientation": "forward",
-            "start": 3348,
-            "end": 5095
-        },
-        {
-            "orientation": "forward",
-            "start": 6201,
-            "end": 7561
-        },
-        {
-            "orientation": "forward",
-            "start": 7563,
-            "end": 8794
-        }
-    ],
+    "124_4": [],
     "128_5": [
         {
             "orientation": "forward",

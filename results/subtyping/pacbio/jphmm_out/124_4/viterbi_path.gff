@@ -4,9 +4,9 @@
 #
 # predicted subtypes for sequence '124_4': 
 124_4	jpHMM	5'-Insertion	0	788	.	+	.
-124_4	jpHMM	D	789	5084	.	+	.
-124_4	jpHMM	A1	5085	5333	.	+	.
-124_4	jpHMM	D	5334	8681	.	+	.
+124_4	jpHMM	D	789	5087	.	+	.
+124_4	jpHMM	G	5088	5334	.	+	.
+124_4	jpHMM	D	5335	8681	.	+	.
 124_4	jpHMM	B	8682	9096	.	+	.
 124_4	jpHMM	D	9097	9410	.	+	.
 124_4	jpHMM	3'-Insertion	9411	9718	.	+	.

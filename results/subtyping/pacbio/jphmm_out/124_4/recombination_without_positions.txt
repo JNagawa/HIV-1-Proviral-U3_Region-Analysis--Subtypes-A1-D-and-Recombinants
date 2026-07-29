@@ -7,4 +7,4 @@
 #
 # predicted recombination of the following sequence(s): 
 
->124_4	bw=1e-20, jp=1e-09	A1BD
+>124_4	bw=1e-20, jp=1e-09	BDG

@@ -1,0 +1,5 @@
+pair	n_A	n_B	exact_coord_match	partial_overlap	A_only	B_only	bp_jaccard
+fimo_vs_tfbstools	16	87	16	0	0	62	0.3077
+fimo_vs_moods	16	12	11	0	5	1	0.6821
+tfbstools_vs_moods	87	12	11	9	67	1	0.2204
+gquad_vs_pqsfinder	15	5	0	5	10	0	0.2946

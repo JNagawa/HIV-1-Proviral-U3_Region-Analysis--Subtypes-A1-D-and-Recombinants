@@ -1,0 +1,6 @@
+sequence	length	identical_to_HXB2_U3	pct_identity	interpretation
+K03455.1	453	reference	100.00	the reference itself
+124_4	453	yes	100.00	IDENTICAL to HXB2 -- no sample-specific sequence here
+128_5	453	yes	100.00	IDENTICAL to HXB2 -- no sample-specific sequence here
+203_3	453	no	84.99	sample-specific sequence present
+211_0	453	no	86.53	sample-specific sequence present

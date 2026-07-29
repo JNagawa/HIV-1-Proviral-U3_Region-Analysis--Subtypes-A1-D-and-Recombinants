@@ -11,4 +11,3 @@
 # of the following sequence(s): 
 # (only if the sequence contains gaps; if not, please see 'recombination.txt' for the results)
 
->203_3 (bw=1e-20)
