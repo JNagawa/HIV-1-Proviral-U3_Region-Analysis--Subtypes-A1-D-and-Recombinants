@@ -86,6 +86,12 @@ append_summary_row() {
         # write the tab-separated header once
         printf "stage\ttool\tsample\twallclock_sec\tpeak_rss_mb\texit_code\toutput_valid\tkey_metric\tnotes_placeholder\n" > "${SUMMARY_TSV}"
     fi
+    # re-running a stage should refresh its rows, not stack a second copy on top
+    # of the stale ones, so drop any existing row for this exact
+    # (stage, tool, sample) before appending the new one
+    local tmp="${SUMMARY_TSV}.tmp"
+    awk -F'\t' -v s="${stage}" -v t="${tool}" -v n="${sample}" \
+        '!($1==s && $2==t && $3==n)' "${SUMMARY_TSV}" > "${tmp}" && mv "${tmp}" "${SUMMARY_TSV}"
     # append this run's row; notes column points to the manual notes file
     printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t(see ease_of_use_notes.md)\n" \
         "${stage}" "${tool}" "${sample}" "${wallclock}" "${rss}" "${exit_code}" "${valid}" "${metric}" \
