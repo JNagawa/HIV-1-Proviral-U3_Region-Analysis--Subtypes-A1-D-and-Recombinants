@@ -147,7 +147,7 @@ add_text() {
 # The short accent rule under the title, copied from the donor deck's slides
 add_rule() {
     SHAPE_ID=$((SHAPE_ID+1))                         # unique shape id
-    SLIDE_BODY="${SLIDE_BODY}<p:sp><p:nvSpPr><p:cNvPr id=\"${SHAPE_ID}\" name=\"Rule ${SHAPE_ID}\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"576072\" y=\"1371600\"/><a:ext cx=\"713232\" cy=\"38100\"/></a:xfrm><a:prstGeom prst=\"roundRect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"${ACCENT}\"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>"
+    SLIDE_BODY="${SLIDE_BODY}<p:sp><p:nvSpPr><p:cNvPr id=\"${SHAPE_ID}\" name=\"Rule ${SHAPE_ID}\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"576072\" y=\"1524000\"/><a:ext cx=\"713232\" cy=\"38100\"/></a:xfrm><a:prstGeom prst=\"roundRect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"${ACCENT}\"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>"
 }
 
 SLIDE_NO=0                                           # how many slides written so far
@@ -155,23 +155,65 @@ SLIDE_NO=0                                           # how many slides written s
 begin_slide() {
     local eyebrow="$1" title="$2"
     SHAPE_ID=1; SLIDE_BODY=""                        # reset per-slide state
-    add_text 384048  365760 1250 1 "${ACCENT}" "Segoe UI" "${eyebrow}"
-    add_text 658368  640080 2700 1 "${INK}"    "Segoe UI" "${title}"
+    add_text 365760  400000 1400 1 "${ACCENT}" "Segoe UI" "${eyebrow}"
+    add_text 685800  820000 3300 1 "${INK}"    "Segoe UI" "${title}"
     add_rule
-    CURSOR=1600000                                   # y position for the next body line
+    # The eyebrow, title and rule are pinned to the top of every slide, so they
+    # are banked here and the body is accumulated separately. end_slide then
+    # shifts only the body, which is what makes vertical balancing possible.
+    HEADER_XML="${SLIDE_BODY}"
+    SLIDE_BODY=""
+    BODY_TOP=1800000                                 # first body line sits here
+    CURSOR=${BODY_TOP}                               # y position for the next body line
 }
 
 # Body line styles, each advancing CURSOR by its own line height
-add_lead()   { add_text "${CURSOR}" 400000 1500 0 "${MUTED}" "Segoe UI"  "$1"; CURSOR=$((CURSOR+430000)); }
-add_bullet() { add_text "${CURSOR}" 340000 1400 0 "${INK}"   "Segoe UI"  "•  $1"; CURSOR=$((CURSOR+330000)); }
-add_key()    { add_text "${CURSOR}" 340000 1400 1 "${ACCENT}" "Segoe UI" "$1"; CURSOR=$((CURSOR+340000)); }
-add_warn()   { add_text "${CURSOR}" 340000 1400 1 "${WARN}"  "Segoe UI"  "$1"; CURSOR=$((CURSOR+340000)); }
-add_mono()   { add_text "${CURSOR}" 260000 1050 0 "${INK}"   "Consolas"  "$1"; CURSOR=$((CURSOR+235000)); }
-add_gap()    { CURSOR=$((CURSOR+160000)); }
+add_lead()   { add_text "${CURSOR}" 490000 1850 0 "${MUTED}" "Segoe UI"  "$1"; CURSOR=$((CURSOR+530000)); }
+add_bullet() { add_text "${CURSOR}" 430000 1750 0 "${INK}"   "Segoe UI"  "•  $1"; CURSOR=$((CURSOR+415000)); }
+add_key()    { add_text "${CURSOR}" 430000 1750 1 "${ACCENT}" "Segoe UI" "$1"; CURSOR=$((CURSOR+425000)); }
+add_warn()   { add_text "${CURSOR}" 430000 1750 1 "${WARN}"  "Segoe UI"  "$1"; CURSOR=$((CURSOR+425000)); }
+add_mono()   { add_text "${CURSOR}" 330000 1400 0 "${INK}"   "Consolas"  "$1"; CURSOR=$((CURSOR+300000)); }
+add_gap()    { CURSOR=$((CURSOR+200000)); }
+
+# Slide height is 6858000 EMU; leave a bottom margin so text never runs off the
+# edge. Because every box is absolutely positioned, an overlong slide fails
+# silently in PowerPoint rather than reflowing, so it is checked at build time.
+SLIDE_BOTTOM=6600000
 
 # Emit the accumulated shapes as ppt/slides/slideN.xml plus its layout rel
 end_slide() {
     SLIDE_NO=$((SLIDE_NO+1))                         # this slide's 1-based number
+    if [ "${CURSOR}" -gt "${SLIDE_BOTTOM}" ]; then
+        echo "WARNING: slide ${SLIDE_NO} content reaches ${CURSOR} EMU, past the ${SLIDE_BOTTOM} safe bottom -- trim a row or shrink a style" >&2
+    fi
+
+    # Balance the slide vertically. A short slide otherwise leaves all its
+    # whitespace in one block at the bottom, which reads as unfinished next to a
+    # full slide. Half the leftover space is pushed above the body so the block
+    # sits optically centred in the area under the title. The shift is capped so
+    # a very sparse slide does not end up floating in the middle of the page.
+    local leftover=$(( SLIDE_BOTTOM - CURSOR ))
+    local shift=0
+    if [ "${leftover}" -gt 0 ]; then
+        shift=$(( leftover / 2 ))
+        [ "${shift}" -gt 700000 ] && shift=700000
+    fi
+    local body="${SLIDE_BODY}"
+    if [ "${shift}" -gt 0 ]; then
+        # add the shift to every y offset in the body shapes, leaving the banked
+        # header untouched
+        body=$(printf '%s' "${SLIDE_BODY}" | awk -v s="${shift}" '{
+            out = ""; rest = $0
+            while (match(rest, /y="[0-9]+"/)) {
+                tok = substr(rest, RSTART, RLENGTH)
+                val = tok; gsub(/[^0-9]/, "", val)
+                out = out substr(rest, 1, RSTART-1) "y=\"" (val + s) "\""
+                rest = substr(rest, RSTART + RLENGTH)
+            }
+            print out rest
+        }')
+    fi
+    SLIDE_BODY="${HEADER_XML}${body}"
     cat > "${P}/ppt/slides/slide${SLIDE_NO}.xml" <<XMLEOF
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:effectLst/></p:bgPr></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${SLIDE_BODY}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>
