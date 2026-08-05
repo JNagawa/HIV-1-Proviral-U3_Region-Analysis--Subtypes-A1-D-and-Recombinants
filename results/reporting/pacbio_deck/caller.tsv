@@ -1,0 +1,5 @@
+sample	call -c (was)	call -m	+ mpileup -X pacbio-ccs
+124_4	1097 SNV / 0 indel	1097 / 0	941 SNV / 24 indel
+128_5	538 SNV / 0 indel	538 / 0	538 SNV / 17 indel
+203_3	149 SNV / 0 indel	149 / 0	149 SNV / 13 indel
+211_0	598 SNV / 0 indel	598 / 0	598 SNV / 11 indel

@@ -1,0 +1,5 @@
+sample	BEFORE (artifact)	AFTER (this run)
+124_4	identical to HXB2	474bp U3, 147 diffs, 3' LTR
+128_5	identical to HXB2	not recovered - excluded
+203_3	real (5' LTR)	real, 454bp
+211_0	real (5' LTR)	real, 453bp

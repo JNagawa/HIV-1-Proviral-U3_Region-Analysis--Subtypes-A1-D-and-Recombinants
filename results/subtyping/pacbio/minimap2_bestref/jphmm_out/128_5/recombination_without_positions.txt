@@ -1,0 +1,9 @@
+# Output of the jpHMM. 
+#
+#   format: 
+#   sequence_name	 chosen_parameters	 predicted_subtypes
+#
+#   (bw=beam-width, jp=jump probability)
+#
+# predicted recombination of the following sequence(s): 
+

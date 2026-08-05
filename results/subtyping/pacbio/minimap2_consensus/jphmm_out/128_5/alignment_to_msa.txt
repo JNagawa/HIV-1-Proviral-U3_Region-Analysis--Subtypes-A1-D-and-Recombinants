@@ -1,0 +1,7 @@
+# Output of the alignment of the query sequence to the given multiple sequence alignment 
+# defined by the most probable path through the jphmm generating the query sequence
+#
+#   format: 
+#   sequence_name (bw=beam-width)
+#   for each query sequence position the aligned msa column 
+

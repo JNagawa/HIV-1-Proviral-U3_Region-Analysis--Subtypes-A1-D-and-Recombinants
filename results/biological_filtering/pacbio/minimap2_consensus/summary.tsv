@@ -1,4 +1,4 @@
 stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
-biological_filtering_pacbio	hivseqinr	all_subset	422.79		1	0	n/a	(see ease_of_use_notes.md)
-biological_filtering_pacbio	hivintact	all_subset	435.02		0	1	1 intact, 4 non-intact	(see ease_of_use_notes.md)
 biological_filtering_pacbio	poplars	all_subset	23.18		0	1	5135 result rows	(see ease_of_use_notes.md)
+biological_filtering_pacbio	hivseqinr	all_subset	1926.36		0	1	7 classified	(see ease_of_use_notes.md)
+biological_filtering_pacbio	hivintact	all_subset	387.41		0	1	1 intact, 4 non-intact	(see ease_of_use_notes.md)

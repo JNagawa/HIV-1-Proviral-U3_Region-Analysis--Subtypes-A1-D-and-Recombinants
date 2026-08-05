@@ -1,0 +1,8 @@
+# Output of the variable regions
+# in the following sequences (based on raw sequence positions)
+#
+# format:
+#   sequence_name
+#   start_position	 end_position	
+#
+

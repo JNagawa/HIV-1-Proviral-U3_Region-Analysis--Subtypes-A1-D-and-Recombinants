@@ -1,0 +1,7 @@
+tool	arm	columns	gap%
+mafft	minimap2_consensus	9855.0 columns	1.3% gap
+muscle	minimap2_consensus	9830.0 columns	1.0% gap
+clustalo	minimap2_consensus	9823.0 columns	1.0% gap
+mafft	minimap2_bestref	9841.0 columns	1.0% gap
+muscle	minimap2_bestref	9850.0 columns	1.1% gap
+clustalo	minimap2_bestref	9854.0 columns	1.1% gap

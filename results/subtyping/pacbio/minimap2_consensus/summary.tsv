@@ -1,0 +1,2 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+subtyping_pacbio	jphmm	124_4	2851.51		0	1	see /etc/ace-data/home/jnagawa/Internship/results/subtyping/pacbio/minimap2_consensus/jphmm_out/124_4/posterior_recombination_path.txt	(see ease_of_use_notes.md)

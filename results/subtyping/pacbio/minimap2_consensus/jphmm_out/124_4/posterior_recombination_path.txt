@@ -8,3 +8,11 @@
 # of the following sequence(s): 
 
 >124_4
+1	789	5'-Insertion
+790	5105	D
+5106	5360	A1
+5361	8737	D
+8738	8949	A1
+8950	9400	D
+9401	9728	3'-Insertion
+
