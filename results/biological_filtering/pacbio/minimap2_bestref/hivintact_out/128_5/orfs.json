@@ -1,0 +1,39 @@
+{
+    "128_5": [
+        {
+            "orientation": "forward",
+            "start": 1,
+            "end": 2291
+        },
+        {
+            "orientation": "forward",
+            "start": 2,
+            "end": 1599
+        },
+        {
+            "orientation": "forward",
+            "start": 3,
+            "end": 1621
+        },
+        {
+            "orientation": "forward",
+            "start": 2085,
+            "end": 5095
+        },
+        {
+            "orientation": "reverse",
+            "start": 1,
+            "end": 2702
+        },
+        {
+            "orientation": "reverse",
+            "start": 2,
+            "end": 2724
+        },
+        {
+            "orientation": "reverse",
+            "start": 3,
+            "end": 2743
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "K03455.1": [
+        {
+            "sequence_name": "K03455.1",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpr, at 5559-5850 in the forward strand, got closest match 5559-5794"
+        },
+        {
+            "sequence_name": "K03455.1",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8797-9417 in the forward strand, got closest match 8767-9167"
+        }
+    ]
+}

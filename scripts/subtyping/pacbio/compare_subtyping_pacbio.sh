@@ -22,11 +22,13 @@ source "${REPO_ROOT}/scripts/common/lib_compare.sh"
 RUN_DIR="${REPO_ROOT}/scripts/subtyping/illumina"   # reuse shared run_<tool>.sh
 
 # input: per-sample proviral consensus FASTAs from the PacBio assembly stage
-ASSEMBLY_DIR="${REPO_ROOT}/results/assembly/pacbio/minimap2_consensus_out"
+# which assembly arm feeds this stage (see compare_msa_pacbio.sh for the rationale)
+ASSEMBLY_ARM="${ASSEMBLY_ARM:-minimap2_consensus}"
+ASSEMBLY_DIR="${REPO_ROOT}/results/assembly/pacbio/${ASSEMBLY_ARM}_out"
 # input: whole-subset MAFFT alignment from the PacBio msa stage (feeds IQ-TREE2)
-ALIGNMENT="${REPO_ROOT}/results/msa/pacbio/mafft_aligned.fasta"
+ALIGNMENT="${REPO_ROOT}/results/msa/pacbio/${ASSEMBLY_ARM}/mafft_aligned.fasta"
 # output: all subtyping results + summary go here
-RESULTS_DIR="${REPO_ROOT}/results/subtyping/pacbio"
+RESULTS_DIR="${REPO_ROOT}/results/subtyping/pacbio/${ASSEMBLY_ARM}"
 # the single TSV every tool appends a timing/validity row to
 SUMMARY_TSV="${RESULTS_DIR}/summary.tsv"
 # create the results dir (and parents) if it doesn't exist

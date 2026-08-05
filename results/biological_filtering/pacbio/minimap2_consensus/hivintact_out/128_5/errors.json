@@ -1,0 +1,34 @@
+{
+    "128_5": [
+        {
+            "sequence_name": "128_5",
+            "error": "WrongORFNumber",
+            "message": "Expected 3 forward ORFs, got 4"
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, NN."
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "FrameshiftInOrf",
+            "message": "Smaller ORF vpr at 5559-5850 contains an out of frame indel: insertions 0 deletions 1."
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, tat_exon2, at 8379-8469 in the forward strand, got closest match 6304-6476"
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, rev_exon2, at 8379-8653 in the forward strand, got closest match 6304-6476"
+        },
+        {
+            "sequence_name": "128_5",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8797-9417 in the forward strand, got closest match 6304-6476"
+        }
+    ]
+}

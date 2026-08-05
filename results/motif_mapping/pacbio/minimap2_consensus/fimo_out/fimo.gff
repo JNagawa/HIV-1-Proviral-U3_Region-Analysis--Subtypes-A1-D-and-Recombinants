@@ -1,0 +1,14 @@
+##gff-version 3
+K03455.1	fimo	nucleotide_motif	350	359	54.2	+	.	Name=MA0107.1_K03455.1+;Alias=RELA;ID=MA0107.1-RELA-1-K03455.1;pvalue=3.76e-06;qvalue=0.00179;sequence=GGGACTTTCC;
+K03455.1	fimo	nucleotide_motif	364	373	54.2	+	.	Name=MA0107.1_K03455.1+;Alias=RELA;ID=MA0107.1-RELA-2-K03455.1;pvalue=3.76e-06;qvalue=0.00179;sequence=GGGACTTTCC;
+124_4	fimo	nucleotide_motif	371	380	54.2	+	.	Name=MA0107.1_124_4+;Alias=RELA;ID=MA0107.1-RELA-1-124_4;pvalue=3.76e-06;qvalue=0.00179;sequence=GGGACTTTCC;
+124_4	fimo	nucleotide_motif	384	393	54.2	+	.	Name=MA0107.1_124_4+;Alias=RELA;ID=MA0107.1-RELA-2-124_4;pvalue=3.76e-06;qvalue=0.00179;sequence=GGGACTTTCC;
+203_3	fimo	nucleotide_motif	364	373	54.2	+	.	Name=MA0107.1_203_3+;Alias=RELA;ID=MA0107.1-RELA-1-203_3;pvalue=3.76e-06;qvalue=0.00179;sequence=GGGACTTTCC;
+211_0	fimo	nucleotide_motif	350	359	54.2	+	.	Name=MA0107.1_211_0+;Alias=RELA;ID=MA0107.1-RELA-1-211_0;pvalue=3.76e-06;qvalue=0.00179;sequence=GGGACTTTCC;
+211_0	fimo	nucleotide_motif	364	373	54.2	+	.	Name=MA0107.1_211_0+;Alias=RELA;ID=MA0107.1-RELA-2-211_0;pvalue=3.76e-06;qvalue=0.00179;sequence=GGGACTTTCC;
+211_0	fimo	nucleotide_motif	65	77	42.9	-	.	Name=MA0105.4_211_0-;Alias=NFKB1;ID=MA0105.4-NFKB1-1-211_0;pvalue=5.17e-05;qvalue=0.135;sequence=AGGGAAATAACCT;
+211_0	fimo	nucleotide_motif	65	77	40.7	+	.	Name=MA0105.4_211_0+;Alias=NFKB1;ID=MA0105.4-NFKB1-2-211_0;pvalue=8.41e-05;qvalue=0.135;sequence=AGGTTATTTCCCT;
+K03455.1	fimo	nucleotide_motif	388	396	43.3	+	.	Name=MA0079.5_K03455.1+;Alias=SP1;ID=MA0079.5-SP1-1-K03455.1;pvalue=4.71e-05;qvalue=0.0374;sequence=TGGGCGGGA;
+203_3	fimo	nucleotide_motif	375	383	44.6	+	.	Name=MA0079.5_203_3+;Alias=SP1;ID=MA0079.5-SP1-1-203_3;pvalue=3.49e-05;qvalue=0.0374;sequence=GGGGAGGTG;
+203_3	fimo	nucleotide_motif	389	397	44.6	+	.	Name=MA0079.5_203_3+;Alias=SP1;ID=MA0079.5-SP1-2-203_3;pvalue=3.49e-05;qvalue=0.0374;sequence=TGGGCGGAG;
+211_0	fimo	nucleotide_motif	389	397	43.3	+	.	Name=MA0079.5_211_0+;Alias=SP1;ID=MA0079.5-SP1-1-211_0;pvalue=4.71e-05;qvalue=0.0374;sequence=TGGGCGGGA;

@@ -1,0 +1,11 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+motif_mapping_pacbio	fimo	positive_control	0.81		0	1	4 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	fimo	all_subset	0.52		0	1	14 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	moods	positive_control	3.26		0	1	2 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	moods	all_subset	2.31		0	1	10 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	tfbstools	positive_control	71.93		0	1	14 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	tfbstools	all_subset	66.50		0	1	89 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	gquad	positive_control	7.18		0	1	3 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	gquad	all_subset	4.39		0	1	15 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	pqsfinder	positive_control	20.65		0	1	1 hits	(see ease_of_use_notes.md)
+motif_mapping_pacbio	pqsfinder	all_subset	20.64		0	1	4 hits	(see ease_of_use_notes.md)

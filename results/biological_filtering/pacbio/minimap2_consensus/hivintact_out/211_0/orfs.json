@@ -1,0 +1,29 @@
+{
+    "211_0": [
+        {
+            "orientation": "forward",
+            "start": 766,
+            "end": 2291
+        },
+        {
+            "orientation": "forward",
+            "start": 2085,
+            "end": 5095
+        },
+        {
+            "orientation": "reverse",
+            "start": null,
+            "end": 3872
+        },
+        {
+            "orientation": "reverse",
+            "start": null,
+            "end": 3762
+        },
+        {
+            "orientation": "reverse",
+            "start": null,
+            "end": 3751
+        }
+    ]
+}

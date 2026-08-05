@@ -1,0 +1,19 @@
+{
+    "K03455.1": [
+        {
+            "orientation": "forward",
+            "start": 766,
+            "end": 2291
+        },
+        {
+            "orientation": "forward",
+            "start": 2085,
+            "end": 5095
+        },
+        {
+            "orientation": "forward",
+            "start": 6204,
+            "end": 8794
+        }
+    ]
+}

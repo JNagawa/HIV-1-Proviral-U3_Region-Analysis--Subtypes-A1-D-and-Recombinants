@@ -7,10 +7,10 @@
 # comparison chain has finished (so installing hifiasm/chopper into the shared
 # env can't disrupt live jobs).
 #
-# Dependency graph:
-#   env-setup ─┬─> download_qc ─> extraction ─> assembly ─┬─> msa ─┬─> subtyping
-#              │                                          │        └─> motif_mapping
-#              └────────────────────────────────────────>└─> biological_filtering
+# Dependency graph (the bracketed part runs once per assembly arm):
+#   env-setup ─> download_qc ─> extraction ─> assembly ─┬─> msa ─┬─> subtyping
+#                                                       │        └─> motif_mapping
+#                                                       └─> biological_filtering
 # Usage: bash scripts/utils/run_pacbio_chain.sh
 # -e abort on error, -u on unset vars, pipefail on any failed pipe stage
 set -euo pipefail
@@ -49,25 +49,39 @@ ASM=$(sbatch --parsable --job-name=pb_assembly --time=24:00:00 --dependency=afte
       "${W}" scripts/assembly/pacbio/compare_assembly_pacbio.sh)
 echo "assembly (afterok:${EXT}) = ${ASM}"            # print its job id and dependency
 
-# multiple-sequence alignment, after assembly succeeds
-MSA=$(sbatch --parsable --job-name=pb_msa --dependency=afterok:${ASM} \
-      "${W}" scripts/msa/pacbio/compare_msa_pacbio.sh)
-echo "msa (afterok:${ASM}) = ${MSA}"                 # print its job id and dependency
+# The assembly step produces two reference-guided consensus sets -- an HXB2
+# baseline and a subtype-matched one -- and every downstream stage is run once
+# per arm so the effect of the reference choice stays measurable all the way to
+# the motif hits. Each arm writes into results/<stage>/pacbio/<arm>/, so the two
+# passes never collide. Override with e.g. ASSEMBLY_ARMS="minimap2_consensus".
+ARMS="${ASSEMBLY_ARMS:-minimap2_consensus minimap2_bestref}"
+# accumulate every submitted job id for the summary line at the end
+ALL_IDS="${ENV} ${QC} ${EXT} ${ASM}"
 
-# biological filtering, also branches off assembly
-BIO=$(sbatch --parsable --job-name=pb_biofilt --dependency=afterok:${ASM} \
-      "${W}" scripts/biological_filtering/pacbio/compare_biological_filtering_pacbio.sh)
-echo "biofilt (afterok:${ASM}) = ${BIO}"             # print its job id and dependency
+for ARM in ${ARMS}; do
+    # multiple-sequence alignment, after assembly succeeds
+    MSA=$(sbatch --parsable --job-name="pb_msa_${ARM}" --dependency=afterok:${ASM} \
+          --export=ALL,ASSEMBLY_ARM="${ARM}" "${W}" scripts/msa/pacbio/compare_msa_pacbio.sh)
+    echo "msa[${ARM}] (afterok:${ASM}) = ${MSA}"      # print its job id and dependency
 
-SUB=$(sbatch --parsable --job-name=pb_subtyping --dependency=afterok:${MSA} \
-      "${W}" scripts/subtyping/pacbio/compare_subtyping_pacbio.sh)  # subtyping, after MSA succeeds
-echo "subtyping (afterok:${MSA}) = ${SUB}"           # print its job id and dependency
+    # biological filtering, also branches off assembly
+    BIO=$(sbatch --parsable --job-name="pb_biofilt_${ARM}" --dependency=afterok:${ASM} \
+          --export=ALL,ASSEMBLY_ARM="${ARM}" "${W}" scripts/biological_filtering/pacbio/compare_biological_filtering_pacbio.sh)
+    echo "biofilt[${ARM}] (afterok:${ASM}) = ${BIO}"  # print its job id and dependency
 
-# motif mapping, also branches off MSA
-MOT=$(sbatch --parsable --job-name=pb_motif --dependency=afterok:${MSA} \
-      "${W}" scripts/motif_mapping/pacbio/compare_motif_mapping_pacbio.sh)
-echo "motif (afterok:${MSA}) = ${MOT}"               # print its job id and dependency
+    # subtyping, after this arm's MSA succeeds
+    SUB=$(sbatch --parsable --job-name="pb_subtyping_${ARM}" --dependency=afterok:${MSA} \
+          --export=ALL,ASSEMBLY_ARM="${ARM}" "${W}" scripts/subtyping/pacbio/compare_subtyping_pacbio.sh)
+    echo "subtyping[${ARM}] (afterok:${MSA}) = ${SUB}"  # print its job id and dependency
+
+    # motif mapping, also branches off this arm's MSA
+    MOT=$(sbatch --parsable --job-name="pb_motif_${ARM}" --dependency=afterok:${MSA} \
+          --export=ALL,ASSEMBLY_ARM="${ARM}" "${W}" scripts/motif_mapping/pacbio/compare_motif_mapping_pacbio.sh)
+    echo "motif[${ARM}] (afterok:${MSA}) = ${MOT}"    # print its job id and dependency
+
+    ALL_IDS="${ALL_IDS} ${MSA} ${BIO} ${SUB} ${MOT}"  # remember this arm's ids
+done
 
 # one line with all submitted job ids for easy scancel/squeue
-echo "${ENV} ${QC} ${EXT} ${ASM} ${MSA} ${BIO} ${SUB} ${MOT}"
+echo "${ALL_IDS}"
 echo "--- PacBio chain submitted ---"                # done marker

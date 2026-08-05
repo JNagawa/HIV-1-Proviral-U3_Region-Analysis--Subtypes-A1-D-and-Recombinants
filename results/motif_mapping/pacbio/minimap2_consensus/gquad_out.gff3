@@ -1,0 +1,15 @@
+K03455.1	gquad	G_quadruplex	99	134	.	+	.	ID=G4_1;likeliness=*
+K03455.1	gquad	G_quadruplex	225	263	.	+	.	ID=G4_2;likeliness=*
+K03455.1	gquad	G_quadruplex	350	402	.	+	.	ID=G4_3;likeliness=*
+124_4	gquad	G_quadruplex	2	50	.	+	.	ID=G4_4;likeliness=*
+124_4	gquad	G_quadruplex	66	107	.	+	.	ID=G4_5;likeliness=*
+124_4	gquad	G_quadruplex	129	168	.	+	.	ID=G4_6;likeliness=*
+124_4	gquad	G_quadruplex	225	260	.	+	.	ID=G4_7;likeliness=*
+124_4	gquad	G_quadruplex	371	422	.	+	.	ID=G4_8;likeliness=*
+128_5	gquad	G_quadruplex	NA	NA	.	+	.	ID=G4_9;likeliness=-
+203_3	gquad	G_quadruplex	49	101	.	+	.	ID=G4_10;likeliness=*
+203_3	gquad	G_quadruplex	105	134	.	+	.	ID=G4_11;likeliness=*
+203_3	gquad	G_quadruplex	349	402	.	+	.	ID=G4_12;likeliness=*
+211_0	gquad	G_quadruplex	49	101	.	+	.	ID=G4_13;likeliness=*
+211_0	gquad	G_quadruplex	105	156	.	+	.	ID=G4_14;likeliness=*
+211_0	gquad	G_quadruplex	350	402	.	+	.	ID=G4_15;likeliness=*

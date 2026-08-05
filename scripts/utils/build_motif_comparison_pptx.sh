@@ -73,7 +73,9 @@ for CAND in "${SLURM_SUBMIT_DIR:-}" \
 done
 [ -n "${REPO_ROOT}" ] || { echo "ERROR: cannot locate repo root." >&2; exit 1; }
 
-CMP_DIR="${REPO_ROOT}/results/motif_mapping/pacbio/tool_comparison"  # analysis inputs
+# which assembly arm's comparison to build slides from (see compare_msa_pacbio.sh)
+ASSEMBLY_ARM="${ASSEMBLY_ARM:-minimap2_consensus}"
+CMP_DIR="${REPO_ROOT}/results/motif_mapping/pacbio/${ASSEMBLY_ARM}/tool_comparison"  # analysis inputs
 TEMPLATE="${REPO_ROOT}/writeups/PacBio_Tool_Comparison.pptx"         # theme/master donor
 OUT_PPTX="${REPO_ROOT}/writeups/PacBio_Motif_Tool_Comparison.pptx"   # what we build
 BUILD="${REPO_ROOT}/.pptx_build"                     # scratch tree, removed at the end

@@ -1,0 +1,64 @@
+{
+    "203_3": [
+        {
+            "sequence_name": "203_3",
+            "error": "WrongORFNumber",
+            "message": "Expected 3 forward ORFs, got 0"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "PackagingSignalDeletion",
+            "message": "Query Sequence exceeds maximum deletion tolerance in PSI. Contains 20 deletions with max tolerance of 10 deletions."
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "RevResponseElementDeletion",
+            "message": "Query Sequence exceeds maximum deletion tolerance in RRE. Contains 265 deletions with max tolerance of 20 deletions."
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a missing splice donor site, -."
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vif, at 4249-4827 in the forward strand, got closest match 3177-4521"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpr, at 4767-5057 in the forward strand, got closest match 3177-4521"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, tat_exon1, at 5038-5252 in the forward strand, got closest match 3177-4521"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, rev_exon1, at 5177-5252 in the forward strand, got closest match 3177-4521"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpu, at 5279-5524 in the forward strand, got closest match 3177-4521"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, tat_exon2, at 7617-7707 in the forward strand, got closest match 3177-4521"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, rev_exon2, at 7617-7912 in the forward strand, got closest match 3177-4521"
+        },
+        {
+            "sequence_name": "203_3",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8056-8667 in the forward strand, got closest match 3177-4521"
+        }
+    ]
+}

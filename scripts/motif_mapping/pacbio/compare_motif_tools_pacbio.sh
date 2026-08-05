@@ -58,7 +58,9 @@ for CAND in "${SLURM_SUBMIT_DIR:-}" \
 done
 [ -n "${REPO_ROOT}" ] || { echo "ERROR: cannot locate repo root." >&2; exit 1; }
 
-MOTIF_DIR="${REPO_ROOT}/results/motif_mapping/pacbio"  # where the tool outputs live
+# which assembly arm's motif output to analyse (see compare_msa_pacbio.sh)
+ASSEMBLY_ARM="${ASSEMBLY_ARM:-minimap2_consensus}"
+MOTIF_DIR="${REPO_ROOT}/results/motif_mapping/pacbio/${ASSEMBLY_ARM}"  # where the tool outputs live
 OUT_DIR="${MOTIF_DIR}/tool_comparison"                 # where this analysis writes
 NORM="${OUT_DIR}/normalized_hits.tsv"                  # every tool's hits, one common schema
 PAIRS="${OUT_DIR}/pairwise_concordance.tsv"            # the pair-by-pair agreement table

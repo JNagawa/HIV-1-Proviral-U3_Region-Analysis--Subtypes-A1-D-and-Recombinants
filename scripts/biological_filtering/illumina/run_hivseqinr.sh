@@ -9,12 +9,33 @@
 # manually edited scripts/tools/HIVSeqinR/R_HIVSeqinR_Combined_ver*.R yourself and
 # confirmed that by creating a CONFIGURED marker file.
 #
-# HIVSeqinR also requires input FASTA with no dashes or IUPAC ambiguity
-# codes -- bcftools consensus output legitimately contains IUPAC codes
-# (R/Y/W/etc) at heterozygous positions, so this wrapper resolves each
-# ambiguity code to one of its bases (arbitrarily, the first alphabetically)
-# before copying sequences in. Record this substitution as a real limitation
-# in the methods write-up, not a transparent equivalent to the true sequence.
+# HIVSeqinR also requires input FASTA with no dashes or IUPAC ambiguity codes
+# ("No dashes, *, or IUPAC mixture symbols are allowed (eg. N, R, S, Y etc)",
+# from the script's own header).
+#
+# This wrapper used to satisfy that by mapping every ambiguity code to a
+# concrete base with tr, which sent N to A. That is unsafe here: since the
+# PacBio assembly step began N-masking unsequenced positions, the consensuses
+# carry 8-88% N, so the substitution would have fabricated up to 8552 A bases
+# for a single sample. Worse, N->A synthesises precisely the APOBEC3G G->A
+# hypermutation signature that intactness callers look for, so the result would
+# not be noisy -- it would be a systematic false "hypermutated" call.
+#
+# Instead each record is SPLIT on runs of N and only the sequenced segments are
+# passed through, so nothing is invented. A segment shorter than MIN_SEGMENT_LEN
+# is dropped as too short to classify. Genuine heterozygous IUPAC codes (R/Y/W
+# etc, which are real observations rather than absent data) are still resolved to
+# a concrete base, and the count of such substitutions is reported.
+#
+# Consequence to carry into the write-up: a sample whose genome arrives in
+# several short segments cannot receive a whole-genome intactness verdict, and
+# HIVSeqinR will classify each segment on its own. That is a limit of the data,
+# not of this wrapper.
+#
+# NOTE ON PRIMERS: Primer2ndF_HXB2/Primer2ndR_HXB2 in the R script are the
+# author's own 2nd-round PCR primers. The primers for this SMRTcap dataset are
+# not documented in its SRA metadata, so the defaults are left in place and
+# autotrim is expected to find no flanks. Treat trimming as not performed.
 #
 # Usage: run_hivseqinr.sh <INPUT_FASTA> <OUTDIR>
 # -u errors on unset vars, pipefail fails a pipe if any stage fails
@@ -47,42 +68,84 @@ mkdir -p "${RAW_FASTA_DIR}"                          # create it if needed
 # clear any .seq files from a previous run so results aren't mixed
 rm -f "${RAW_FASTA_DIR}"/*.seq
 
-# Split into one file per record (id sanitized, sequence unwrapped), then
-# resolve IUPAC ambiguity codes to a single concrete base (arbitrary,
-# alphabetically-first choice per code -- R/Y/S/W/K/M/B/D/H/V/N below).
-# Non-ambiguous bases (A/C/G/T, either case) pass through untouched.
-awk -v outdir="${RAW_FASTA_DIR}" '                   # split the multi-FASTA into per-record .seq files (outdir passed in)
-function flush(   safe_id, outfile) {                # write the currently-buffered record to its own file
-    if (id == "") return                             # nothing buffered yet, skip
-    safe_id = id                                     # copy id so we can sanitize it for use as a filename
-    gsub(/-/, "_", safe_id)                          # replace dashes with underscores (safe filenames)
-    gsub(/\*/, "_", safe_id)                         # replace asterisks with underscores too
-    outfile = outdir "/" safe_id ".seq"              # per-record output path
-    print ">" safe_id > outfile                      # write the sanitized FASTA header
-    print seq > outfile                              # write the unwrapped sequence on one line
-    close(outfile)                                   # close so we do not hit the open-file-descriptor limit
+# shortest sequenced segment worth classifying; below this there is no ORF
+# structure to assess and HIVSeqinR would only report it as truncated
+MIN_SEGMENT_LEN="${MIN_SEGMENT_LEN:-500}"
+# per-record accounting of what was split out and what was substituted
+SEGMENT_REPORT="${OUTDIR}/segments.tsv"
+
+# Split every record on runs of N, writing one .seq file per sequenced segment.
+# Nothing is invented: unsequenced stretches are dropped, not filled. Real
+# heterozygous IUPAC codes are resolved to a concrete base and counted.
+awk -v outdir="${RAW_FASTA_DIR}" -v minlen="${MIN_SEGMENT_LEN}" -v report="${SEGMENT_REPORT}" '
+function emit(   safe_id, nseg, parts, i, seg, resolved, nsub, outid, outfile, kept, dropn, dropbp) {
+    if (id == "") return
+    safe_id = id
+    gsub(/[^A-Za-z0-9_]/, "_", safe_id)              # HIVSeqinR only tolerates "_" as a special character
+    # split on runs of one or more N; every remaining piece was actually sequenced
+    nseg = split(toupper(seq), parts, /N+/)
+    kept = 0; dropn = 0; dropbp = 0
+    for (i = 1; i <= nseg; i++) {
+        seg = parts[i]
+        if (length(seg) < minlen) { dropn++; dropbp += length(seg); continue }
+        kept++
+        # Resolve genuine ambiguity codes. Unlike N these are real observations
+        # (a mixed base that was sequenced), so collapsing them to one allele
+        # loses information but invents nothing. Counted so the loss is visible.
+        resolved = seg
+        nsub = gsub(/[RYSWKMBDHV]/, "", resolved)     # count them
+        resolved = seg                               # then do the real substitution
+        gsub(/R/, "A", resolved); gsub(/Y/, "C", resolved); gsub(/S/, "C", resolved)
+        gsub(/W/, "A", resolved); gsub(/K/, "G", resolved); gsub(/M/, "A", resolved)
+        gsub(/B/, "C", resolved); gsub(/D/, "A", resolved); gsub(/H/, "A", resolved)
+        gsub(/V/, "A", resolved)
+        # a record yielding one segment keeps its plain id; several get _seg<N>
+        outid = (nseg == 1) ? safe_id : safe_id "_seg" kept
+        outfile = outdir "/" outid ".seq"
+        print ">" outid > outfile
+        print resolved > outfile
+        close(outfile)
+        printf "%s\t%s\t%d\t%d\n", id, outid, length(seg), nsub >> report
+    }
+    printf "  %-12s %d segment(s) kept, %d dropped as shorter than %dbp (%dbp total)\n", \
+           id, kept, dropn, minlen, dropbp > "/dev/stderr"
 }
-/^>/ {                                               # on each FASTA header line...
-    flush()                                          # ...write out the previous record first
-    header = substr($0, 2)                           # strip the leading ">"
-    split(header, tok, /[ \t]/)                      # split on whitespace to isolate the id from any description
-    id = tok[1]                                      # use the first token as the record id
-    seq = ""                                         # reset the sequence buffer for this record
-    next                                             # done with the header line
-}
-{ seq = seq $0 }                                     # accumulate (unwrap) sequence lines into the buffer
-END { flush() }                                      # flush the final buffered record at end of input
+BEGIN { printf "record\tsegment_id\tsegment_len\tiupac_substitutions\n" > report }
+/^>/ { emit(); header = substr($0, 2); split(header, tok, /[ \t]/); id = tok[1]; seq = ""; next }
+{ seq = seq $0 }
+END { emit(); close(report) }
 ' "${IN}"
 
-# process each per-record file to strip IUPAC ambiguity codes
-for f in "${RAW_FASTA_DIR}"/*.seq; do
-    # skip if the glob matched nothing (no .seq files)
-    [ -e "${f}" ] || continue
-    HEADER=$(head -1 "${f}")                          # keep the header line as-is
-    # map each ambiguity code to its alphabetically-first base
-    SEQ=$(tail -n +2 "${f}" | tr 'RYSWKMBDHVNryswkmbdhvn' 'ACCAGACAAAAACCAGACAAAA')
-    printf '%s\n%s\n' "${HEADER}" "${SEQ}" > "${f}"  # rewrite the file with the resolved sequence
-done
+# HIVSeqinR requires at least one reference/positive control per run (its own
+# README, April 2021 update), so append the bundled 8E5/HXB2 control if the
+# caller did not already include a control sequence.
+CONTROL_FASTA="${HIVSEQINR_DIR}/Examples_8E5_HXB2.fasta"
+if [ -s "${CONTROL_FASTA}" ]; then
+    awk -v outdir="${RAW_FASTA_DIR}" '
+    function emit(   safe_id, outfile) {
+        if (id == "") return
+        safe_id = "CTRL_" id
+        gsub(/[^A-Za-z0-9_]/, "_", safe_id)
+        outfile = outdir "/" safe_id ".seq"
+        print ">" safe_id > outfile
+        print toupper(seq) > outfile
+        close(outfile)
+    }
+    /^>/ { emit(); header = substr($0, 2); split(header, tok, /[ \t]/); id = tok[1]; seq = ""; next }
+    { seq = seq $0 }
+    END { emit() }
+    ' "${CONTROL_FASTA}"
+    echo "  appended positive control from $(basename "${CONTROL_FASTA}")" >&2
+fi
+
+# nothing classifiable means nothing to run -- fail loudly rather than let
+# HIVSeqinR produce an empty summary that would read as a clean result
+N_SEG=$(ls -1 "${RAW_FASTA_DIR}"/*.seq 2>/dev/null | wc -l)
+if [ "${N_SEG}" -eq 0 ]; then
+    echo "ERROR: no sequenced segment of at least ${MIN_SEGMENT_LEN}bp survived N-splitting; nothing to classify." >&2
+    exit 1
+fi
+echo "  ${N_SEG} sequence file(s) staged for HIVSeqinR (see ${SEGMENT_REPORT})" >&2
 
 # the R script uses relative paths, so run from the repo dir
 cd "${HIVSEQINR_DIR}" || exit 1

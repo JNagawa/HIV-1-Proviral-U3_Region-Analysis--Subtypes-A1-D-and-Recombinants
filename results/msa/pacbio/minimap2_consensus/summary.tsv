@@ -1,0 +1,4 @@
+stage	tool	sample	wallclock_sec	peak_rss_mb	exit_code	output_valid	key_metric	notes_placeholder
+msa_pacbio	mafft	all_subset	123.96		0	1	5/5 seqs retained, 9855.0 columns, 1.3% gap	(see ease_of_use_notes.md)
+msa_pacbio	muscle	all_subset	236.29		0	1	5/5 seqs retained, 9830.0 columns, 1.0% gap	(see ease_of_use_notes.md)
+msa_pacbio	clustalo	all_subset	203.81		0	1	5/5 seqs retained, 9823.0 columns, 1.0% gap	(see ease_of_use_notes.md)

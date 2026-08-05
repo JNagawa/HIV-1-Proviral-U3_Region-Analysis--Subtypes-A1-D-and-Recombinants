@@ -198,9 +198,29 @@ consensus_against_ref() {
     minimap2 -a -x map-hifi -t "${THREADS:-4}" "${ref}" "${reads}" 2>"${outdir}/${srr}_minimap2.log" \
         | samtools view -b - | samtools sort -o "${bam}" || exit 1
     samtools index "${bam}" || exit 1                # index the sorted BAM (required by mpileup)
-    # call variants haploid (--ploidy 1) since a provirus is a single genome
-    bcftools mpileup -Ou -f "${ref}" "${bam}" 2>"${outdir}/${srr}_bcftools.log" \
-        | bcftools call -c --ploidy 1 -Oz -o "${vcf}" 2>>"${outdir}/${srr}_bcftools.log" || exit 1
+    # Call variants haploid (--ploidy 1) since a provirus is a single genome.
+    #
+    # -X pacbio-ccs is load-bearing, not a tuning nicety. With mpileup's generic
+    # defaults this step called ZERO indels in all four samples, even where every
+    # read agreed: at 203_3 K03455.1:168 all 19 reads carry a 1bp deletion and the
+    # caller still emitted a plain reference call. Because samtools depth does not
+    # count deleted positions, the only trace such a base left was depth 0, so the
+    # mask below labelled it "unsequenced" and wrote an N -- turning the dataset's
+    # best-supported deletions into missing data, including two inside the U3
+    # window (203_3:168, 211_0:399). The profile sets --indels-cns plus HiFi-
+    # appropriate gap/homopolymer parameters and recovers them: measured 2026-08-05
+    # on the existing BAMs, indels called go 0 -> 24/17/13/11 for
+    # 124_4/128_5/203_3/211_0, and 124_4's SNV count drops 1097 -> 941 as
+    # indel-induced false substitutions are resolved into the correct events.
+    #
+    # Switching the caller -c -> -m was NOT what fixed this -- tested in isolation
+    # it changed nothing (still 0 indels). It is kept because the legacy -c caller
+    # is deprecated and --indels-cns is designed against the multiallelic caller.
+    #
+    # The profile assumes CCS/HiFi reads, which is consistent with the map-hifi
+    # preset used above. --indels-cns requires bcftools >= 1.20 (1.24 here).
+    bcftools mpileup -X pacbio-ccs -Ou -f "${ref}" "${bam}" 2>"${outdir}/${srr}_bcftools.log" \
+        | bcftools call -m --ploidy 1 -Oz -o "${vcf}" 2>>"${outdir}/${srr}_bcftools.log" || exit 1
     # index the VCF so bcftools consensus can read it
     tabix -p vcf "${vcf}" || exit 1
     # A VCF with no records while reads did map means mpileup rejected the
@@ -217,19 +237,49 @@ consensus_against_ref() {
     # the reference base -- a subtype-B sequence presented as sample data, with
     # no N to flag it. Measured 2026-08-04: that left 203_3's consensus 88%
     # HXB2, 128_5's 44%, 211_0's 39%, every one of them reported as "0.00% N".
-    # Build a BED of the zero-coverage stretches so -m can mask them instead.
+    # Build a BED of the unsequenced stretches so -m can mask them instead.
     local mask="${outdir}/${srr}.uncovered.bed"
     local refid reflen
     # the reference's sequence name, which must match the BED/VCF CHROM field
     refid=$(seqkit fx2tab -n -i "${ref}" | head -1 | cut -f1)
     reflen=$(seqkit fx2tab -n -l -i "${ref}" | head -1 | cut -f2)
-    # Positions with at least one read. samtools depth -a is asked for all
-    # positions, but emits nothing at all when a BAM has no alignments, so the
-    # uncovered intervals are derived by complementing this list against the
-    # reference length rather than by reading zero-depth rows back.
-    samtools depth -a "${bam}" 2>/dev/null | awk -F'\t' '$3>0{print $2}' > "${outdir}/${srr}.covered.pos"
+    # Coverage is taken from read alignment SPANS, deliberately not from
+    # `samtools depth`. depth counts BASES, and a reference position that every
+    # read deletes therefore reports depth 0 -- indistinguishable from a position
+    # no read ever reached. Masking on depth conflated the two and wrote N over
+    # the dataset's best-supported deletions: measured 2026-08-05, 203_3
+    # K03455.1:168 is deleted by 19/19 reads yet was masked as "unsequenced",
+    # as was 211_0:399, both inside the U3 window this project is about. Worse,
+    # `bcftools consensus` resolves a mask/variant collision in favour of the
+    # mask, so the called deletion was applied and then padded back to an N,
+    # inflating 203_3's consensus by 13bp (9730 -> 9743) while still losing the
+    # deletion. A position inside a read's span is sequenced by definition, so
+    # spans separate "never read here" from "read here, and it is absent".
+    #
+    # Reference span per alignment = POS .. POS + (reference-consuming CIGAR
+    # ops) - 1. M/D/N/=/X consume reference; I/S/H/P do not, so soft-clips and
+    # insertions correctly fail to extend coverage.
+    samtools view -F 0x904 "${bam}" 2>/dev/null \
+        | awk -F'\t' -v OFS='\t' '
+            {
+                cig = $6                             # this alignment CIGAR string
+                if (cig == "*") next                 # no alignment info to walk
+                ref_span = 0                         # reference bases this read covers
+                while (match(cig, /^[0-9]+[MIDNSHP=X]/)) {   # consume one <len><op> at a time
+                    tok = substr(cig, RSTART, RLENGTH)       # e.g. "150M"
+                    oplen = substr(tok, 1, length(tok) - 1) + 0   # numeric length
+                    op = substr(tok, length(tok))            # the operation letter
+                    if (op ~ /^[MDN=X]$/) ref_span += oplen  # only these advance the reference
+                    cig = substr(cig, RSTART + RLENGTH)      # drop the token just handled
+                }
+                if (ref_span > 0) print $4, $4 + ref_span - 1   # 1-based inclusive span
+            }' > "${outdir}/${srr}.read_spans.tsv"
+    # Complement the spanned intervals against the reference length. Done by
+    # complementing rather than by listing uncovered positions directly because
+    # a BAM with no alignments yields no spans at all, and that case must still
+    # produce a whole-genome mask instead of an empty one.
     awk -v L="${reflen}" -v CHR="${refid}" -v OFS='\t' '
-        {cov[$1]=1}
+        {for (p = $1; p <= $2; p++) cov[p] = 1}      # mark every position under a read
         END{
             inrun=0
             for (i=1; i<=L; i++) {
@@ -237,7 +287,7 @@ consensus_against_ref() {
                 else if (inrun) { print CHR, s-1, i-1; inrun=0 }
             }
             if (inrun) print CHR, s-1, L
-        }' "${outdir}/${srr}.covered.pos" > "${mask}"
+        }' "${outdir}/${srr}.read_spans.tsv" > "${mask}"
 
     # apply called variants onto the reference, N-masking everything unsequenced
     bcftools consensus -m "${mask}" -f "${ref}" "${vcf}" \
@@ -415,6 +465,15 @@ for SRR in $(subset_accessions pacbio "${REPO_ROOT}/scripts/common/subset_sample
         append_summary_row "assembly_pacbio" "${TOOL}" "${SRR}" "${WALLCLOCK_SEC}" "${PEAK_RSS_MB}" "${EXIT_CODE}" "${VALID}" "${METRIC}"
     done
 done
+
+# Generate the findings report. summary.tsv answers "did the run succeed"; the
+# report answers "for this region, was it sequenced or is it absent", which is
+# the distinction the motif work downstream depends on and the one a consensus
+# FASTA cannot express on its own. Non-fatal: a failed report must not discard
+# an assembly that otherwise completed.
+if ! bash "${REPO_ROOT}/scripts/utils/report_pacbio_assembly.sh"; then
+    echo "WARNING: assembly findings report failed; summary.tsv is still valid." >&2
+fi
 
 # final confirmation pointing the user at the results table
 echo "Done. See ${SUMMARY_TSV}"

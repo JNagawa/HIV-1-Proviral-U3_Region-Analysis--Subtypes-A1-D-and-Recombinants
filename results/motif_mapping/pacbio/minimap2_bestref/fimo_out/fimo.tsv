@@ -1,0 +1,18 @@
+motif_id	motif_alt_id	sequence_name	start	stop	strand	score	p-value	q-value	matched_sequence
+MA0107.1	RELA	211_0	350	359	+	15.8878	3.76e-06	0.00178	GGGACTTTCC
+MA0107.1	RELA	K03455.1	350	359	+	15.8878	3.76e-06	0.00178	GGGACTTTCC
+MA0107.1	RELA	K03455.1	364	373	+	15.8878	3.76e-06	0.00178	GGGACTTTCC
+MA0107.1	RELA	203_3	364	373	+	15.8878	3.76e-06	0.00178	GGGACTTTCC
+MA0107.1	RELA	211_0	364	373	+	15.8878	3.76e-06	0.00178	GGGACTTTCC
+MA0107.1	RELA	124_4	371	380	+	15.8878	3.76e-06	0.00178	GGGACTTTCC
+MA0107.1	RELA	124_4	384	393	+	15.8878	3.76e-06	0.00178	GGGACTTTCC
+MA0079.5	SP1	203_3	375	383	+	11.5306	3.49e-05	0.037	GGGGAGGTG
+MA0079.5	SP1	203_3	389	397	+	11.5306	3.49e-05	0.037	TGGGCGGAG
+MA0079.5	SP1	K03455.1	388	396	+	10.5408	4.71e-05	0.037	TGGGCGGGA
+MA0079.5	SP1	211_0	389	397	+	10.5408	4.71e-05	0.037	TGGGCGGGA
+MA0105.4	NFKB1	211_0	65	77	-	3.30769	5.17e-05	0.134	AGGGAAATAACCT
+MA0105.4	NFKB1	211_0	65	77	+	1.40385	8.41e-05	0.134	AGGTTATTTCCCT
+
+# FIMO (Find Individual Motif Occurrences): Version 5.5.9 compiled on May 27 2026 at 12:41:17
+# The format of this file is described at https://meme-suite.org/meme/doc/fimo-output-format.html#tsv_results.
+# fimo --oc /etc/ace-data/home/jnagawa/Internship/results/motif_mapping/pacbio/minimap2_bestref/fimo_out --thresh 1e-4 /etc/ace-data/home/jnagawa/Internship/data/reference/jaspar/core6_pfms.meme /etc/ace-data/home/jnagawa/Internship/results/motif_mapping/pacbio/minimap2_bestref/U3_extracted.fasta

@@ -1,0 +1,19 @@
+{
+    "124_4": [
+        {
+            "sequence_name": "124_4",
+            "error": "WrongORFNumber",
+            "message": "Expected 3 forward ORFs, got 4"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, NN."
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8333-8956 in the forward strand, got closest match 8315-8952"
+        }
+    ]
+}

@@ -1,0 +1,21 @@
+# Output of the jpHMM. 
+#
+#   chosen parameters: 
+#	jump probability: 	1e-09
+#
+#   format: 
+#   sequence_name (bw=beam-width)
+#   start_position	 end_position	 predicted_subtype 
+#
+# predicted recombination with breakpoints based on raw sequence positions 
+# of the following sequence(s): 
+
+>124_4 (bw=1e-20)
+1	789	5'-Insertion
+790	5112	D
+5113	5361	A1
+5362	8731	D
+8732	8949	A1
+8950	9400	D
+9401	9728	3'-Insertion
+

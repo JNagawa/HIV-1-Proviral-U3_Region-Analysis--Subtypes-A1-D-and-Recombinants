@@ -1,0 +1,39 @@
+{
+    "211_0": [
+        {
+            "sequence_name": "211_0",
+            "error": "WrongORFNumber",
+            "message": "Expected 3 forward ORFs, got 2"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, tat_exon1, at 5376-5590 in the forward strand, got closest match 5105-5394"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, rev_exon1, at 5515-5590 in the forward strand, got closest match 5105-5394"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, vpu, at 5607-5852 in the forward strand, got closest match 5105-5394"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, tat_exon2, at 7915-8005 in the forward strand, got closest match 5105-5394"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, rev_exon2, at 7915-8189 in the forward strand, got closest match 5105-5394"
+        },
+        {
+            "sequence_name": "211_0",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8333-8956 in the forward strand, got closest match 5105-5394"
+        }
+    ]
+}

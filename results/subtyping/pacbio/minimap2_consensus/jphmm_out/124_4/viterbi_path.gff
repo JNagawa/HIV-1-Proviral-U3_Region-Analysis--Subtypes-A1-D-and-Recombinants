@@ -1,0 +1,13 @@
+# Output of the jpHMM. 
+#
+# Predicted recombination for the following query sequences:
+#
+# predicted subtypes for sequence '124_4': 
+124_4	jpHMM	5'-Insertion	0	788	.	+	.
+124_4	jpHMM	D	789	5111	.	+	.
+124_4	jpHMM	A1	5112	5360	.	+	.
+124_4	jpHMM	D	5361	8730	.	+	.
+124_4	jpHMM	A1	8731	8948	.	+	.
+124_4	jpHMM	D	8949	9399	.	+	.
+124_4	jpHMM	3'-Insertion	9400	9727	.	+	.
+

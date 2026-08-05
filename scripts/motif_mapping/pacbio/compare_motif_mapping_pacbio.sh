@@ -20,9 +20,11 @@ source "${REPO_ROOT}/scripts/common/lib_compare.sh"
 RUN_DIR="${REPO_ROOT}/scripts/motif_mapping/illumina"   # reuse shared run_<tool>.sh
 
 # input: MAFFT alignment from the PacBio msa stage
-ALIGNMENT="${REPO_ROOT}/results/msa/pacbio/mafft_aligned.fasta"
+# which assembly arm feeds this stage (see compare_msa_pacbio.sh for the rationale)
+ASSEMBLY_ARM="${ASSEMBLY_ARM:-minimap2_consensus}"
+ALIGNMENT="${REPO_ROOT}/results/msa/pacbio/${ASSEMBLY_ARM}/mafft_aligned.fasta"
 # output: all motif-mapping results + summary go here
-RESULTS_DIR="${REPO_ROOT}/results/motif_mapping/pacbio"
+RESULTS_DIR="${REPO_ROOT}/results/motif_mapping/pacbio/${ASSEMBLY_ARM}"
 # the single TSV every tool appends a timing/validity row to
 SUMMARY_TSV="${RESULTS_DIR}/summary.tsv"
 # create the results dir (and parents) if needed

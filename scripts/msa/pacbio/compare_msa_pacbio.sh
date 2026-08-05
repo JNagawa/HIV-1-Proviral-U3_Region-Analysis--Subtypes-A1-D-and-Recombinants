@@ -21,10 +21,19 @@ RUN_DIR="${REPO_ROOT}/scripts/msa/illumina"   # reuse the shared run_<tool>.sh s
 
 # HXB2 (K03455.1) reference sequence, the alignment anchor
 REF_FASTA="${REPO_ROOT}/data/reference/K03455.1.fasta"
+# Which assembly arm feeds this stage. The PacBio assembly step produces two
+# reference-guided consensus sets -- minimap2_consensus (HXB2 baseline) and
+# minimap2_bestref (closest LTR-complete Group M reference) -- and both are
+# carried through downstream so the effect of the reference choice stays
+# measurable all the way to the motif hits. Each arm writes to its own
+# subdirectory rather than sharing one summary.tsv with an extra column,
+# because append_summary_row's 9-column schema is shared by every stage on all
+# three platforms and widening it would desync the existing summaries.
+ASSEMBLY_ARM="${ASSEMBLY_ARM:-minimap2_consensus}"
 # input: per-sample proviral consensus FASTAs from the PacBio assembly stage
-ASSEMBLY_DIR="${REPO_ROOT}/results/assembly/pacbio/minimap2_consensus_out"
-# output: alignments + summary go here
-RESULTS_DIR="${REPO_ROOT}/results/msa/pacbio"
+ASSEMBLY_DIR="${REPO_ROOT}/results/assembly/pacbio/${ASSEMBLY_ARM}_out"
+# output: alignments + summary go here, scoped to this arm
+RESULTS_DIR="${REPO_ROOT}/results/msa/pacbio/${ASSEMBLY_ARM}"
 # the single TSV every aligner appends a timing/validity row to
 SUMMARY_TSV="${RESULTS_DIR}/summary.tsv"
 # create the results dir (and parents) if it doesn't exist

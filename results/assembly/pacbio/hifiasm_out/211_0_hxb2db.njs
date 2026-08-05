@@ -6,7 +6,7 @@
   "description": "/etc/ace-data/home/jnagawa/Internship/data/reference/K03455.1.fasta",
   "number-of-letters": 9719,
   "number-of-sequences": 1,
-  "last-updated": "2026-08-04T20:35:00",
+  "last-updated": "2026-08-05T13:26:00",
   "number-of-volumes": 1,
   "bytes-total": 39658,
   "bytes-to-cache": 2599,

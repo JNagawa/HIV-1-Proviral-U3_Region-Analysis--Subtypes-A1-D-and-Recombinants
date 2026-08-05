@@ -1,0 +1,34 @@
+{
+    "124_4": [
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected an ORF, gag, at 336-1837 in the forward strand, got -1-970"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "FrameshiftInOrf",
+            "message": "ORF gag at -1-970 contains an out of frame indel, deletions 0 insertions 455."
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected an ORF, pol, at 1634-4641 in the forward strand, got 2894-4641"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected an ORF, env, at 5770-8329 in the forward strand, got 6169-7472"
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MajorSpliceDonorSiteMutated",
+            "message": "Query sequence has a mutated splice donor site, NN."
+        },
+        {
+            "sequence_name": "124_4",
+            "error": "MisplacedORF",
+            "message": "Expected a smaller ORF, nef, at 8333-8956 in the forward strand, got closest match 8315-8952"
+        }
+    ]
+}
